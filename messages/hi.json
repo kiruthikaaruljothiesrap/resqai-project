@@ -1,0 +1,14 @@
+{
+  "Dashboard": {
+    "welcome": "வாபசி पधारें, {name} 👋",
+    "tasksCompleted": "पूरे किए गए कार्य",
+    "hoursVolunteered": "स्वेच्छा से दिए गए घंटे",
+    "volunteerScore": "स्वयंसेवक स्कोर",
+    "activeTasks": "सक्रिय कार्य",
+    "quickActions": "त्वरित कार्रवाइयां",
+    "findTasks": "कार्य खोजें",
+    "viewMap": "मानचित्र देखें",
+    "myTasks": "मेरे कार्य",
+    "community": "समुदाय"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "Dashboard": {
+    "welcome": "Welcome back, {name} 👋",
+    "tasksCompleted": "Tasks Completed",
+    "hoursVolunteered": "Hours Volunteered",
+    "volunteerScore": "Volunteer Score",
+    "activeTasks": "Active Tasks",
+    "quickActions": "QUICK ACTIONS",
+    "findTasks": "Find Tasks",
+    "viewMap": "View Map",
+    "myTasks": "My Tasks",
+    "community": "Community"
+  },
+  "Common": {
+    "pleaseLogin": "Please log in to view this page.",
+    "loading": "Loading...",
+    "logout": "Logout",
+    "online": "Online",
+    "busy": "Busy",
+    "offline": "Offline",
+    "sidebar": {
+      "dashboard": "Dashboard",
+      "feed": "Social Feed",
+      "network": "My Network",
+      "profile": "Profile",
+      "activities": "Activities",
+      "recommendations": "Recommendations",
+      "map": "Map View",
+      "tasks": "Tasks",
+      "chat": "Chat",
+      "community": "Community"
+    }
+  }
+}

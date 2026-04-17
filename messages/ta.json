@@ -1,0 +1,34 @@
+{
+  "Dashboard": {
+    "welcome": "நல்வரவு, {name} 👋",
+    "tasksCompleted": "முடிக்கப்பட்ட பணிகள்",
+    "hoursVolunteered": "தொண்டாற்றிய நேரங்கள்",
+    "volunteerScore": "தொண்டர் மதிப்பெண்",
+    "activeTasks": "செயலில் உள்ள பணிகள்",
+    "quickActions": "விரைவான செயல்கள்",
+    "findTasks": "பணிகளைத் தேடு",
+    "viewMap": "வரைபடத்தைப் பார்",
+    "myTasks": "எனது பணிகள்",
+    "community": "சமூகம்"
+  },
+  "Common": {
+    "pleaseLogin": "இந்தப் பக்கத்தைப் பார்க்க தயவுசெய்து உள்நுழையவும்.",
+    "loading": "ஏற்றப்படுகிறது...",
+    "logout": "வெளியேறு",
+    "online": "ஆன்லைன்",
+    "busy": "பிஸியாக",
+    "offline": "ஆஃப்லைன்",
+    "sidebar": {
+      "dashboard": "டாஷ்போர்டு",
+      "feed": "சமூக ஊட்டம்",
+      "network": "எனது நெட்வொர்க்",
+      "profile": "சுயவிவரம்",
+      "activities": "செயல்பாடுகள்",
+      "recommendations": "பரிந்துரைகள்",
+      "map": "வரைபடம்",
+      "tasks": "பணிகள்",
+      "chat": "அரட்டை",
+      "community": "சமூகம்"
+    }
+  }
+}

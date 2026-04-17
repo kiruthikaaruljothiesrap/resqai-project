@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+:root {
+  --teal-900: #0d3b3e;
+  --teal-700: #0f6b71;
+  --teal-500: #14b8c4;
+  --teal-300: #67e8f0;
+  --amber-500: #f59e0b;
+  --amber-400: #fbbf24;
+  --rose-500: #f43f5e;
+  --indigo-500: #6366f1;
+  --green-500: #22c55e;
+  --yellow-500: #eab308;
+  --bg-dark: #060d10;
+  --bg-card: #0d1f24;
+  --bg-card2: #112228;
+  --text-primary: #f0f9fa;
+  --text-secondary: #94a3b8;
+  --border: rgba(20, 184, 196, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100vh;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-dark); }
+::-webkit-scrollbar-thumb { background: var(--teal-700); border-radius: 4px; }
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, var(--teal-300), var(--amber-400));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass Card */
+.glass-card {
+  background: rgba(13, 31, 36, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* Status Dots */
+.status-online { background: #22c55e; }
+.status-busy   { background: #eab308; }
+.status-offline{ background: #374151; }
+
+/* Sidebar item active */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.sidebar-item:hover,
+.sidebar-item.active {
+  background: rgba(20, 184, 196, 0.12);
+  color: var(--teal-300);
+}
+
+/* Smooth fade in */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s ease forwards; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(20, 184, 196, 0.4); }
+  50%       { box-shadow: 0 0 0 12px rgba(20, 184, 196, 0); }
+}
+.pulse-glow { animation: pulse-glow 2s infinite; }
+
+/* Priority colors */
+.priority-low      { color: #22c55e; border-color: #22c55e; }
+.priority-medium   { color: #f59e0b; border-color: #f59e0b; }
+.priority-high     { color: #f97316; border-color: #f97316; }
+.priority-critical { color: #ef4444; border-color: #ef4444; }
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+  .sidebar-collapsed { width: 0; overflow: hidden; }
+}
