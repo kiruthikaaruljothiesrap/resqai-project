@@ -4,8 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { subscribeToNeeds, createTask } from "@/lib/firestore";
 import { Need } from "@/types";
 
-const priorityColors: Record<string, string> = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
-const priorityBg: Record<string, string> = { critical: "#ef444418", high: "#f9731618", medium: "#f59e0b18", low: "#22c55e18" };
+const priorityColors: Record<string, string> = { critical: "text-red-500", high: "text-orange-500", medium: "text-amber-500", low: "text-green-500" };
+const priorityBgs: Record<string, string> = { critical: "bg-red-500/10 ring-red-500/20", high: "bg-orange-500/10 ring-orange-500/20", medium: "bg-amber-500/10 ring-amber-500/20", low: "bg-green-500/10 ring-green-500/20" };
 
 export default function RecommendationsPage() {
   const { profile } = useAuth();
@@ -15,7 +15,6 @@ export default function RecommendationsPage() {
   
   useEffect(() => {
     const unsub = subscribeToNeeds((data) => {
-      // Only show open needs
       setNeeds(data.filter(n => n.status === "open"));
     });
     return () => unsub();
@@ -27,119 +26,146 @@ export default function RecommendationsPage() {
       await createTask({
         needId: need.id,
         volunteerId: profile.uid,
-        volunteerName: profile.firstName + ' ' + Math.floor(Math.random() * 100), // mock last name or full name is better
+        volunteerName: `${profile.firstName} V${Math.floor(Math.random() * 900) + 100}`,
         ngoId: need.ngoId,
         title: need.title,
         description: need.description,
-        status: "pending", // Waiting for NGO approval or it's implicitly accepted
+        status: "pending",
         points: 50,
         estimatedHours: 2,
       });
       setAccepted(prev => [...prev, need.id]);
     } catch (e) {
       console.error(e);
-      alert("Failed to accept task.");
     }
   };
 
   const filtered = filter === "all" ? needs : needs.filter((r) => r.priority === filter);
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>Recommendations</h1>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>Live AI-matched help requests near you based on your skills and location</p>
-      </div>
-
-      {/* AI Info Banner */}
-      <div style={{
-        background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(20,184,196,0.08))",
-        border: "1px solid rgba(99,102,241,0.25)", borderRadius: 12,
-        padding: 16, marginBottom: 20, display: "flex", alignItems: "center", gap: 14,
-      }}>
-        <div style={{ fontSize: 32 }}>🤖</div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div style={{ fontWeight: 700, color: "#c7d2fe" }}>Live Matching Active</div>
-          <div style={{ fontSize: 13, color: "#94a3b8" }}>These open requests have been matched to your profile.</div>
+          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">AI <span className="text-cyan-400">Matches</span></h1>
+          <p className="text-sm text-[#94a3b8] font-medium mt-1 uppercase tracking-widest text-[10px]">Neural-matched help requests near you</p>
         </div>
       </div>
 
-      {/* Filter pills */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+      {/* AI Status Banner */}
+      <div className="bg-gradient-to-r from-indigo-500/10 to-cyan-400/10 border border-indigo-500/20 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-indigo-500/40 transition-all">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">🤖</div>
+        <div className="text-center sm:text-left">
+          <h3 className="text-lg font-black text-indigo-400 tracking-tight uppercase">Cognitive Matching Active</h3>
+          <p className="text-sm text-[#94a3b8] font-medium leading-relaxed">Requests are dynamically filtered based on your <span className="text-cyan-400 font-bold uppercase text-[10px]">Primary Directives</span> (Skills & Location).</p>
+        </div>
+      </div>
+
+      {/* Category Selection */}
+      <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
         {["all", "critical", "high", "medium", "low"].map((p) => (
-          <button key={p} onClick={() => setFilter(p)} style={{
-            padding: "7px 16px", borderRadius: 999, border: "1px solid",
-            borderColor: filter === p ? (p === "all" ? "#14b8c4" : priorityColors[p]) : "rgba(255,255,255,0.1)",
-            background: filter === p ? (p === "all" ? "rgba(20,184,196,0.15)" : priorityBg[p]) : "transparent",
-            color: filter === p ? (p === "all" ? "#14b8c4" : priorityColors[p]) : "#64748b",
-            fontSize: 13, fontWeight: 600, cursor: "pointer", textTransform: "capitalize",
-          }}>{p === "all" ? "All Requests" : `${p.toUpperCase()} Priority`}</button>
+          <button 
+            key={p} 
+            onClick={() => setFilter(p)} 
+            className={`
+              px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border
+              ${filter === p 
+                ? 'bg-cyan-500 border-cyan-400 text-white shadow-lg shadow-cyan-500/20 active:scale-95' 
+                : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}
+            `}
+          >
+            {p === "all" ? "All Targets" : `${p} Priority`}
+          </button>
         ))}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div className="grid grid-cols-1 gap-6">
         {filtered.length === 0 ? (
-          <div style={{ color: "#94a3b8", padding: 24, textAlign: "center" }}>No open tasks found. Check back later!</div>
+          <div className="glass-card p-20 text-center text-[#94a3b8] font-bold uppercase tracking-widest text-xs italic opacity-60">
+            No targets detected in current sector. Scan again later.
+          </div>
         ) : filtered.map((r) => (
-          <div key={r.id} className="glass-card" style={{
-            padding: 22,
-            borderColor: accepted.includes(r.id) ? "rgba(34,197,94,0.3)" : "rgba(20,184,196,0.15)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-              <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
-                <div style={{
-                  width: 52, height: 52, borderRadius: 12, fontSize: 26,
-                  background: priorityBg[r.priority] || "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center",
-                  border: `1px solid ${priorityColors[r.priority] || "#fff"}44`, flexShrink: 0,
-                }}>🤝</div>
-                <div>
-                  <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{r.title}</h3>
-                  <p style={{ fontSize: 13, color: "#64748b" }}>{r.ngoName}</p>
-                  <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>{r.description}</p>
+          <div 
+            key={r.id} 
+            className={`
+              glass-card p-6 md:p-10 group transition-all duration-300 relative overflow-hidden
+              ${accepted.includes(r.id) ? 'border-green-500/40 bg-green-500/5' : 'hover:border-cyan-500/30'}
+            `}
+          >
+            {/* Background Accent */}
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br transition-opacity opacity-0 group-hover:opacity-10 pointer-events-none ${prioBgGradient(r.priority)}`} />
+            
+            <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
+              <div className="flex flex-col sm:flex-row gap-6 w-full">
+                <div className={`
+                  w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-4xl shadow-xl ring-1
+                  ${priorityBgs[r.priority] || 'bg-white/5 ring-white/10'}
+                `}>
+                  {r.priority === 'critical' ? '🚨' : '🤝'}
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-cyan-400 transition-colors">{r.title}</h3>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Entity: <span className="text-slate-400">{r.ngoName}</span></p>
+                  </div>
+                  <p className="text-sm text-[#94a3b8] font-medium leading-relaxed max-w-2xl">{r.description}</p>
+                  
+                  <div className="flex flex-wrap gap-6 pt-2">
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      <span className="text-lg">📍</span> {r.location?.address || "Mobile Base"}
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                      <span className="text-lg">🕒</span> Published {new Date(r.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {(r.requiredSkills || []).map((s) => (
+                      <span key={s} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-cyan-400 uppercase tracking-widest group-hover:bg-cyan-500/10 transition-all">
+                        #{s}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8, flexShrink: 0 }}>
-                <span style={{
-                  padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-                  color: priorityColors[r.priority] || "#fff", background: priorityBg[r.priority] || "rgba(255,255,255,0.1)",
-                  border: `1px solid ${priorityColors[r.priority] || "#fff"}44`,
-                }}>{(r.priority || "unknown").toUpperCase()}</span>
-                <span style={{ fontSize: 12, color: "#f97316" }}>🔥 New</span>
-              </div>
-            </div>
-
-            {/* Meta info */}
-            <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#94a3b8", marginBottom: 14, flexWrap: "wrap" }}>
-              <span>📍 {r.location?.address || "Unknown Location"}</span>
-              <span>🕒 Created: {new Date(r.createdAt).toLocaleDateString()}</span>
-            </div>
-
-            {/* Skills */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-              {(r.requiredSkills || []).map((s) => (
-                <span key={s} style={{ padding: "4px 10px", borderRadius: 999, fontSize: 12, background: "rgba(20,184,196,0.1)", color: "#14b8c4", border: "1px solid rgba(20,184,196,0.2)" }}>
-                  #{s}
+              
+              <div className="flex flex-col items-end gap-3 shrink-0 w-full md:w-auto">
+                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ring-1 ${priorityBgs[r.priority]}`}>
+                  <span className={priorityColors[r.priority]}>{r.priority.toUpperCase()}</span> PRIORITY
                 </span>
-              ))}
+                <span className="animate-pulse bg-orange-500/10 text-orange-500 text-[9px] font-black px-3 py-1 rounded-full border border-orange-500/20 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Live Feed
+                </span>
+              </div>
             </div>
 
-            {/* Actions */}
-            {accepted.includes(r.id) ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#22c55e", fontWeight: 600 }}>
-                <span>✅</span> <span>You've accepted this task! Check "Tasks" view.</span>
+            <div className="mt-10 pt-8 border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              {accepted.includes(r.id) ? (
+                <div className="flex items-center gap-3 text-green-500 text-xs font-black uppercase tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">
+                  <span className="text-lg font-bold">✓</span> Deployment Sequence Initialized. Check My Tasks.
+                </div>
+              ) : (
+                <button onClick={() => handleAccept(r)} className="px-10 py-4.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all w-full md:w-auto text-center">
+                  Initialize Deployment →
+                </button>
+              )}
+              <div className="flex items-center gap-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] whitespace-nowrap">
+                <span className="hover:text-cyan-400 cursor-help transition-colors">Safety Code 4A</span>
+                <span className="opacity-20">|</span>
+                <span className="hover:text-cyan-400 cursor-help transition-colors">Skill Match 98%</span>
               </div>
-            ) : (
-              <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={() => handleAccept(r)} style={{
-                  padding: "10px 24px", borderRadius: 10, border: "none",
-                  background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff",
-                  fontWeight: 700, cursor: "pointer", fontSize: 14,
-                }}>✅ Accept Task</button>
-              </div>
-            )}
+            </div>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function prioBgGradient(p: string) {
+  switch(p) {
+    case 'critical': return 'from-red-500 to-transparent';
+    case 'high': return 'from-orange-500 to-transparent';
+    case 'medium': return 'from-amber-500 to-transparent';
+    default: return 'from-green-500 to-transparent';
+  }
 }

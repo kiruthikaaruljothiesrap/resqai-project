@@ -44,7 +44,6 @@ function SignupPageContent() {
     if (form.password.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (!captchaDone) { setError("Please complete the CAPTCHA verification."); return; }
     if (!form.phoneNo || form.phoneNo.length < 10) { setError("Please enter a valid phone number."); return; }
-    // Move to OTP verification
     setStep("otp");
     sendOtp();
   };
@@ -61,7 +60,7 @@ function SignupPageContent() {
       const data = await res.json();
       if (data.success) {
         setOtpSent(true);
-        if (data.demo_otp) setDemoOtp(data.demo_otp); // show in dev
+        if (data.demo_otp) setDemoOtp(data.demo_otp);
       } else {
         setOtpError(data.error || "Failed to send OTP.");
       }
@@ -81,7 +80,6 @@ function SignupPageContent() {
       const data = await res.json();
       if (!data.success) { setOtpError(data.error || "Invalid OTP."); return; }
 
-      // OTP verified! Now create the account
       setLoading(true);
       await signUp(
         form.email, 
@@ -108,41 +106,41 @@ function SignupPageContent() {
 
   if (step === "otp") {
     return (
-      <div style={pageStyle}>
-        <div className="glass-card fade-up" style={{ maxWidth: 420, width: "100%", padding: 40, textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>📱</div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Verify Phone Number</h2>
-          <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 24 }}>
-            An OTP has been sent to <strong style={{ color: "#14b8c4" }}>{form.phoneNo}</strong>
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_40%_30%,_#0f3a3e_0%,_#060d10_60%)]">
+        <div className="glass-card w-full max-w-md p-10 text-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="text-6xl mb-8 drop-shadow-2xl">📱</div>
+          <h2 className="text-2xl font-black text-[#f0f9fa] mb-2 tracking-tight">Identity Verification</h2>
+          <p className="text-sm text-[#94a3b8] font-medium mb-10 leading-relaxed uppercase tracking-widest text-[10px]">
+            Transmission sent to <strong className="text-cyan-400">{form.phoneNo}</strong>
           </p>
 
           {demoOtp && (
-            <div style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#f59e0b" }}>
-              🧪 Dev Mode OTP: <strong>{demoOtp}</strong>
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-8 text-xs font-bold text-amber-500 uppercase tracking-widest">
+              🧪 DEV_MODE_OTP: <strong>{demoOtp}</strong>
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+          <div className="flex justify-center mb-8">
             <input
               value={otpValue}
               onChange={e => setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="Enter 6-digit OTP"
+              placeholder="000000"
               maxLength={6}
-              style={{ ...inputStyle, textAlign: "center", fontSize: 20, letterSpacing: 8, fontWeight: 700, width: 200 }}
+              className="w-48 bg-white/5 border border-white/10 rounded-2xl text-center text-3xl font-black tracking-[0.4em] py-4 text-cyan-400 focus:border-cyan-400/50 outline-none transition-all"
             />
           </div>
 
-          {otpError && <p style={{ color: "#f87171", fontSize: 13, marginBottom: 12 }}>⚠️ {otpError}</p>}
+          {otpError && <p className="text-xs font-bold text-red-500 mb-6 uppercase tracking-tight">⚠️ {otpError}</p>}
 
-          <button onClick={verifyOtpAndSignup} disabled={otpLoading || otpValue.length < 6 || loading} style={btnStyle}>
-            {otpLoading || loading ? "Verifying..." : "✅ Verify & Create Account"}
+          <button onClick={verifyOtpAndSignup} disabled={otpLoading || otpValue.length < 6 || loading} className="w-full py-4 bg-cyan-500 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-cyan-500/20 active:scale-[0.98] transition-all">
+            {otpLoading || loading ? "Verifying..." : "Confirm Identity →"}
           </button>
 
-          <button onClick={sendOtp} disabled={otpLoading} style={{ background: "none", border: "none", color: "#14b8c4", cursor: "pointer", fontSize: 13, marginTop: 12, display: "block", width: "100%" }}>
-            {otpLoading ? "Sending..." : "🔄 Resend OTP"}
+          <button onClick={sendOtp} disabled={otpLoading} className="w-full text-xs font-black text-cyan-400 uppercase tracking-widest mt-8 hover:text-white transition-colors">
+            {otpLoading ? "Retransmitting..." : "🔄 Resend Transmission"}
           </button>
-          <button onClick={() => { setStep("form"); setOtpValue(""); setOtpError(""); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, marginTop: 8, display: "block", width: "100%" }}>
-            ← Back to form
+          <button onClick={() => { setStep("form"); setOtpValue(""); setOtpError(""); }} className="w-full text-xs font-black text-slate-600 uppercase tracking-widest mt-4">
+            ← Abort To Form
           </button>
         </div>
       </div>
@@ -151,16 +149,16 @@ function SignupPageContent() {
 
   if (step === "verify") {
     return (
-      <div style={pageStyle}>
-        <div className="glass-card fade-up" style={{ maxWidth: 420, width: "100%", padding: 40, textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>📬</div>
-          <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Verify your email</h2>
-          <p style={{ color: "#94a3b8", marginBottom: 24 }}>
-            A verification link has been sent to <strong style={{ color: "#14b8c4" }}>{form.email}</strong>.
-            Please check your inbox and click the link to activate your account.
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_40%_30%,_#0f3a3e_0%,_#060d10_60%)]">
+        <div className="glass-card w-full max-w-md p-10 text-center animate-in fade-in zoom-in-95 duration-300">
+          <div className="text-7xl mb-8">📨</div>
+          <h2 className="text-2xl font-black text-[#f0f9fa] mb-4 tracking-tight uppercase">Confirm Link</h2>
+          <p className="text-sm text-[#94a3b8] font-medium leading-relaxed mb-8">
+            A secure verification sequence has been dispatched to <br/><strong className="text-cyan-400 break-all">{form.email}</strong>.
+            Visit your inbox to complete the uplink.
           </p>
-          <Link href={`/auth/login?role=${role}`} style={{ ...btnStyle, display: "inline-block", textDecoration: "none", textAlign: "center", padding: "12px 32px" }}>
-            Go to Login →
+          <Link href={`/auth/login?role=${role}`} className="w-full py-4 bg-cyan-500 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-cyan-500/20 inline-block text-center transition-all active:scale-[0.98]">
+            Proceed to Login →
           </Link>
         </div>
       </div>
@@ -168,155 +166,149 @@ function SignupPageContent() {
   }
 
   return (
-    <div style={pageStyle}>
-      <div className="glass-card fade-up" style={{ width: "100%", maxWidth: 520, padding: 40 }}>
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src="/logo.png" alt="ResQAI" style={{ width: 60, height: 60, borderRadius: 14, objectFit: "contain", marginBottom: 10 }} />
-          <h1 style={{ fontSize: 26, fontWeight: 800 }}>
-            <span className="gradient-text">Create Account</span>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_40%_30%,_#0f3a3e_0%,_#060d10_60%)] py-12 md:py-20">
+      <div className="glass-card w-full max-w-lg p-8 md:p-12 animate-in fade-in slide-in-from-bottom-6 duration-500">
+        <div className="text-center mb-10">
+          <div className="inline-block p-4 bg-white/5 rounded-2xl mb-6 shadow-2xl ring-1 ring-white/10">
+            <img src="/logo.png" alt="ResQAI" className="w-12 h-12 object-contain" />
+          </div>
+          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">
+            Create <span className="text-cyan-400">Identity</span>
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: 13, marginTop: 6 }}>
-            Joining as <span style={{ color: "#14b8c4", textTransform: "capitalize" }}>{role}</span>
+          <p className="text-[10px] text-[#94a3b8] font-black uppercase tracking-[0.2em] mt-3">
+            Deploying as <span className="text-cyan-400">{role}</span>
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Name row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 0 }}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="First Name" value={form.firstName} onChange={(v) => update("firstName", v)} placeholder="Jane" />
             <Field label="Last Name" value={form.lastName} onChange={(v) => update("lastName", v)} placeholder="Doe" />
           </div>
 
-          <Field label="Username" value={form.username} onChange={(v) => update("username", v)} placeholder="@janedoe" />
-          <Field label="Email Address" type="email" value={form.email} onChange={(v) => update("email", v)} placeholder="jane@example.com" />
-          <Field label="Password" type="password" value={form.password} onChange={(v) => update("password", v)} placeholder="Min. 8 characters" />
-          <Field label="Confirm Password" type="password" value={form.confirm} onChange={(v) => update("confirm", v)} placeholder="Re-enter password" />
+          <Field label="Access Alias (Username)" value={form.username} onChange={(v) => update("username", v)} placeholder="@janedoe" />
+          <Field label="Comms Address (Email)" type="email" value={form.email} onChange={(v) => update("email", v)} placeholder="jane@network.com" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="Passkey" type="password" value={form.password} onChange={(v) => update("password", v)} placeholder="Min. 8 keys" />
+            <Field label="Verify Passkey" type="password" value={form.confirm} onChange={(v) => update("confirm", v)} placeholder="Re-enter keys" />
+          </div>
 
-          {/* Phone fields */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>Phone Number *</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[10px] font-black text-[#64748b] uppercase tracking-[0.2em] px-1">Primary Phone *</label>
               <input
                 type="tel"
                 value={form.phoneNo}
                 onChange={e => { update("phoneNo", e.target.value); if (!form.whatsappNo) update("whatsappNo", e.target.value); }}
-                placeholder="+91 98765 43210"
+                placeholder="+91 00000 00000"
                 required
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#14b8c4")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(20,184,196,0.2)")}
+                className="w-full px-5 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl text-[#f0f9fa] text-sm font-medium outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/20 transition-all placeholder:text-slate-700"
               />
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={labelStyle}>WhatsApp No (optional)</label>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[10px] font-black text-[#64748b] uppercase tracking-[0.2em] px-1">WhatsApp Uplink</label>
               <input
                 type="tel"
                 value={form.whatsappNo}
                 onChange={e => update("whatsappNo", e.target.value)}
-                placeholder="Same as phone if same"
-                style={inputStyle}
-                onFocus={(e) => (e.target.style.borderColor = "#25D366")}
-                onBlur={(e) => (e.target.style.borderColor = "rgba(20,184,196,0.2)")}
+                placeholder="Optional"
+                className="w-full px-5 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl text-[#f0f9fa] text-sm font-medium outline-none focus:border-green-400/40 focus:ring-1 focus:ring-green-400/20 transition-all placeholder:text-slate-700"
               />
             </div>
           </div>
 
           {role === "volunteer" && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Volunteer Type</label>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-[#64748b] uppercase tracking-[0.2em] px-1">Specialization</label>
               <select
                 value={form.volunteerType}
                 onChange={(e) => update("volunteerType", e.target.value)}
-                style={selectStyle}
+                className="w-full px-5 py-4 bg-neutral-900 border border-white/10 rounded-xl text-[#f0f9fa] text-sm font-bold appearance-none cursor-pointer outline-none focus:ring-1 focus:ring-cyan-400/20 transition-all"
               >
-                <option value="">Select your specialty...</option>
+                <option value="" className="bg-neutral-900">Select Specialty...</option>
                 {VOLUNTEER_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>{t.icon} {t.label}</option>
+                  <option key={t.id} value={t.id} className="bg-neutral-900">{t.icon} {t.label}</option>
                 ))}
               </select>
             </div>
           )}
 
           {role === "ngo" && (
-            <div style={{ padding: "16px", background: "rgba(245,158,11,0.05)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, marginBottom: 16 }}>
-              <h3 style={{ fontSize: 13, color: "#f59e0b", marginBottom: 12, fontWeight: 700 }}>NGO Registration Details (Required)</h3>
+            <div className="p-6 bg-amber-500/5 ring-1 ring-amber-500/20 rounded-2xl space-y-6">
+              <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.3em] text-center border-b border-amber-500/10 pb-4">NGO Credentials Required</h3>
               
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={labelStyle}>Registration No. *</label>
-                  <input type="text" value={form.ngoRegistrationNo} onChange={(e) => update("ngoRegistrationNo", e.target.value)} placeholder="e.g. NGO/1234/2020" style={inputStyle} required={role === "ngo"} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest px-1">Reg Index *</label>
+                  <input type="text" value={form.ngoRegistrationNo} onChange={(e) => update("ngoRegistrationNo", e.target.value)} placeholder="NGO/XX/000" className="w-full px-4 py-3 bg-black/40 border border-amber-500/20 rounded-xl text-white text-sm font-bold outline-none focus:border-amber-500 transition-all" required={role === "ngo"} />
                 </div>
-                <div>
-                  <label style={labelStyle}>Year Est. *</label>
-                  <input type="number" min="1900" max="2026" value={form.ngoEstablishedYear} onChange={(e) => update("ngoEstablishedYear", e.target.value)} placeholder="e.g. 2015" style={inputStyle} required={role === "ngo"} />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest px-1">Epoch (Year) *</label>
+                  <input type="number" min="1900" max="2026" value={form.ngoEstablishedYear} onChange={(e) => update("ngoEstablishedYear", e.target.value)} placeholder="2015" className="w-full px-4 py-3 bg-black/40 border border-amber-500/20 rounded-xl text-white text-sm font-bold outline-none focus:border-amber-500 transition-all" required={role === "ngo"} />
                 </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>Official Certificate Upload *</label>
-                <input type="file" accept="image/*,application/pdf" required={role === "ngo"} disabled={uploadingCert} style={{ ...inputStyle, padding: "8px 12px" }} onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setUploadingCert(true);
-                    try {
-                      const { uploadFile } = await import("@/lib/storage");
-                      const url = await uploadFile(file, `certificates/${Date.now()}_${file.name}`);
-                      update("ngoCertificateUrl", url);
-                    } catch (err) {
-                      alert("Certificate upload failed. Check rules & connection.");
-                    } finally {
-                      setUploadingCert(false);
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-amber-500/60 uppercase tracking-widest px-1">Certificate Matrix *</label>
+                <div className="relative">
+                  <input type="file" accept="image/*,application/pdf" required={role === "ngo"} disabled={uploadingCert} className="w-full px-4 py-10 bg-black/60 border-2 border-dashed border-amber-500/20 rounded-2xl text-xs font-black text-slate-500 file:hidden cursor-pointer" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setUploadingCert(true);
+                      try {
+                        const { uploadFile } = await import("@/lib/storage");
+                        const url = await uploadFile(file, `certificates/${Date.now()}_${file.name}`);
+                        update("ngoCertificateUrl", url);
+                      } catch (err) {
+                        alert("Upload protocols failed.");
+                      } finally {
+                        setUploadingCert(false);
+                      }
                     }
-                  }
-                }} />
+                  }} />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40">
+                    <span className="text-3xl mb-2">📜</span>
+                    <span className="text-[9px] font-black uppercase tracking-widest italic">Upload PDF/Image</span>
+                  </div>
+                </div>
                 {uploadingCert ? (
-                  <p style={{ fontSize: 11, color: "#14b8c4", marginTop: 4 }}>Uploading certificate...</p>
+                  <p className="text-[9px] font-black text-cyan-400 uppercase tracking-widest animate-pulse">Establishing data link...</p>
                 ) : form.ngoCertificateUrl ? (
-                  <p style={{ fontSize: 11, color: "#22c55e", marginTop: 4 }}>Certificate uploaded successfully ✓</p>
+                  <p className="text-[9px] font-black text-green-500 uppercase tracking-widest">Uplink verified ✓</p>
                 ) : (
-                  <p style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Must match Registration No. Will be verified by AI.</p>
+                  <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest text-center italic">Details verified by Guardian AI</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Fake CAPTCHA */}
-          <div style={{
-            border: "1px solid rgba(20,184,196,0.2)",
-            borderRadius: 10,
-            padding: "14px 16px",
-            marginBottom: 16,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            background: "rgba(255,255,255,0.03)",
-          }}>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4 group cursor-pointer transition-all hover:bg-white/[0.08]">
             <input
               type="checkbox"
               id="captcha"
               checked={captchaDone}
               onChange={(e) => setCaptchaDone(e.target.checked)}
-              style={{ width: 18, height: 18, cursor: "pointer" }}
+              className="w-5 h-5 rounded border-cyan-400/30 bg-black/40 text-cyan-500 focus:ring-cyan-500/20 cursor-pointer"
             />
-            <label htmlFor="captcha" style={{ color: "#94a3b8", fontSize: 14, cursor: "pointer" }}>
-              I'm not a robot 🤖
+            <label htmlFor="captcha" className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] cursor-pointer group-hover:text-slate-200">
+              Identity Authenticated 🤖
             </label>
-            <div style={{ marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div style={{ fontSize: 24 }}>🔒</div>
-              <span style={{ fontSize: 9, color: "#475569" }}>reCAPTCHA</span>
+            <div className="ml-auto text-center opacity-30 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all">
+              <div className="text-2xl">🛡️</div>
             </div>
           </div>
 
-          {error && <p style={{ color: "#f87171", fontSize: 13, marginBottom: 12 }}>⚠️ {error}</p>}
+          {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-black text-red-500 flex items-center gap-2 uppercase tracking-tighter transition-all animate-bounce"><span>⚠️</span> {error}</div>}
 
-          <button type="submit" disabled={loading} style={btnStyle}>
-            {loading ? "Creating account…" : "Create Account →"}
+          <button type="submit" disabled={loading} className="w-full py-4.5 bg-gradient-to-r from-cyan-500 to-cyan-700 text-white rounded-xl font-black uppercase tracking-[0.2em] shadow-2xl shadow-cyan-500/20 active:scale-[0.98] transition-all disabled:grayscale disabled:opacity-50">
+            {loading ? "Synthesizing Identity..." : "Finalize Infrastructure →"}
           </button>
 
-          <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: 12 }}>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-            <span style={{ fontSize: 12, color: "#64748b" }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+          <div className="flex items-center gap-4 my-8">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Social Auth Proxy</span>
+            <div className="flex-1 h-px bg-white/10" />
           </div>
 
           <button
@@ -326,22 +318,18 @@ function SignupPageContent() {
                 const user = await logInWithGoogle(role as "volunteer" | "ngo");
                 router.push(`/${role}/dashboard`);
               } catch (err: any) {
-                setError(err.message || "Google sign-in failed.");
+                setError(err.message || "Uplink protocols failed.");
               }
             }}
-            style={{
-              width: "100%", padding: "12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)",
-              background: "rgba(255,255,255,0.05)", color: "#f0f9fa", fontWeight: 600, fontSize: 14,
-              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10
-            }}
+            className="w-full py-4 px-6 bg-white/5 border border-white/10 rounded-xl text-[#f0f9fa] text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
           >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 18 }} />
-            Sign up with Google
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5" />
+            Establish Google Link
           </button>
 
-          <p style={{ textAlign: "center", marginTop: 24, fontSize: 13, color: "#94a3b8" }}>
-            Already have an account?{" "}
-            <Link href={`/auth/login?role=${role}`} style={{ color: "#14b8c4" }}>Sign in</Link>
+          <p className="text-center pt-8 text-[11px] font-bold text-slate-500 uppercase tracking-[0.1em]">
+            Identity exists?{" "}
+            <Link href={`/auth/login?role=${role}`} className="text-cyan-400 font-black hover:text-cyan-300 transition-all ml-1">Initiate Link</Link>
           </p>
         </form>
       </div>
@@ -351,7 +339,7 @@ function SignupPageContent() {
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div style={{ color: "#fff", padding: 24 }}>Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-cyan-400 font-black animate-pulse uppercase tracking-[0.2em]">Deploying interface...</div>}>
       <SignupPageContent />
     </Suspense>
   );
@@ -361,59 +349,16 @@ function Field({
   label, type = "text", value, onChange, placeholder
 }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder: string }) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <label style={labelStyle}>{label}</label>
+    <div className="space-y-1.5 flex-1">
+      <label className="text-[10px] font-black text-[#64748b] uppercase tracking-[0.2em] px-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        style={inputStyle}
-        onFocus={(e) => (e.target.style.borderColor = "#14b8c4")}
-        onBlur={(e) => (e.target.style.borderColor = "rgba(20,184,196,0.2)")}
+        className="w-full px-5 py-3.5 bg-white/[0.03] border border-white/10 rounded-xl text-[#f0f9fa] text-sm font-medium outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/20 transition-all placeholder:text-slate-700"
       />
     </div>
   );
 }
-
-const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 24,
-  background: "radial-gradient(ellipse at 40% 30%, #0f3a3e 0%, #060d10 60%)",
-};
-
-const labelStyle: React.CSSProperties = { display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 };
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "11px 14px",
-  background: "rgba(255,255,255,0.05)",
-  border: "1px solid rgba(20,184,196,0.2)",
-  borderRadius: 10,
-  color: "#f0f9fa",
-  fontSize: 14,
-  outline: "none",
-  transition: "border-color 0.2s",
-};
-
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  cursor: "pointer",
-};
-
-const btnStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "13px",
-  borderRadius: 10,
-  border: "none",
-  background: "linear-gradient(135deg, #14b8c4, #0f6b71)",
-  color: "#fff",
-  fontWeight: 700,
-  fontSize: 16,
-  cursor: "pointer",
-  transition: "opacity 0.2s",
-};

@@ -12,6 +12,7 @@ export default function CommunityPage() {
   const [input, setInput] = useState("");
   const [groups, setGroups] = useState<any[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [mobileShowList, setMobileShowList] = useState(true);
   
   const [showCreate, setShowCreate] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -28,6 +29,7 @@ export default function CommunityPage() {
   useEffect(() => {
     if (activeGroup) {
       const unsub = subscribeToGroupMessages(activeGroup, setMessages);
+      setMobileShowList(false);
       return () => unsub();
     }
   }, [activeGroup]);
@@ -35,14 +37,6 @@ export default function CommunityPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // Set initial active group if none is selected
-  useEffect(() => {
-    if (!activeGroup && groups.length > 0) {
-      const publicG = groups.filter(g => g.visibility === "public");
-      if (publicG.length > 0) setActiveGroup(publicG[0].id);
-    }
-  }, [groups, activeGroup]);
 
   const displayedGroups = groups.filter(g => g.visibility === tab || (tab === "private" && g.members?.includes(profile?.uid)));
   const activeGroupData = groups.find(g => g.id === activeGroup);
@@ -74,113 +68,137 @@ export default function CommunityPage() {
       senderName: profile.firstName + ' ' + (profile.lastName || ""),
       content: input,
       type: "text",
-      groupId: activeGroup // ensure lib/chat accepts extra payload -> it spreads it
+      groupId: activeGroup
     } as any);
     setInput("");
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800 }}>Community</h1>
-          <p style={{ color: "#94a3b8", fontSize: 14 }}>Join groups and connect with the volunteer network</p>
+    <div className="flex flex-col h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] pb-10">
+      <div className="flex justify-between items-center mb-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-black text-[#f0f9fa] tracking-tight">Community</h1>
+          <p className="hidden md:block text-sm text-[#94a3b8] font-medium">Connect with volunteers and share vital real-time info.</p>
         </div>
-        <button onClick={() => setShowCreate(true)} style={{
-          padding: "10px 20px", borderRadius: 10, border: "none",
-          background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff",
-          fontWeight: 700, cursor: "pointer", fontSize: 14,
-        }}>+ Create Group</button>
+        <button 
+          onClick={() => setShowCreate(true)} 
+          className="px-4 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-[#14b8c4] to-[#0f6b71] text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-lg shadow-cyan-500/10 active:scale-95 transition-all"
+        >
+          + New Group
+        </button>
       </div>
 
       {showCreate && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div className="glass-card" style={{ width: 420, padding: 32 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>Create New Group</h2>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, color: "#94a3b8", display: "block", marginBottom: 6 }}>Group Name</label>
-              <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="e.g. CSR Medical Unit" style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-xl font-black text-[#f0f9fa] mb-6 tracking-tight">Create Channel</h2>
+            <div className="space-y-4 mb-8">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em]">Group Name</label>
+                <input value={newGroupName} onChange={e => setNewGroupName(e.target.value)} placeholder="e.g. CSR Medical Unit" className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium outline-none focus:border-[#14b8c4]/50 transition-all" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em]">Purpose</label>
+                <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} placeholder="Description..." className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium outline-none focus:border-[#14b8c4]/50 transition-all" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em]">Privacy Scale</label>
+                <select value={newGroupType} onChange={e => setNewGroupType(e.target.value as any)} className="w-full px-4 py-3 bg-neutral-900 border border-white/10 rounded-xl text-sm font-medium outline-none focus:border-[#14b8c4]/50 transition-all">
+                  <option value="public">🌐 Open Network (Public)</option>
+                  <option value="private">🔒 Restricted (Private)</option>
+                </select>
+              </div>
             </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, color: "#94a3b8", display: "block", marginBottom: 6 }}>Description</label>
-              <input value={newGroupDesc} onChange={e => setNewGroupDesc(e.target.value)} placeholder="What is this group for?" style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
-            </div>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, color: "#94a3b8", display: "block", marginBottom: 6 }}>Type</label>
-              <select value={newGroupType} onChange={e => setNewGroupType(e.target.value as any)} style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }}>
-                <option value="public">🌐 Public</option>
-                <option value="private">🔒 Private (invite only)</option>
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowCreate(false)} style={{ flex: 1, padding: 11, borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#94a3b8", cursor: "pointer" }}>Cancel</button>
-              <button onClick={handleCreateGroup} style={{ flex: 1, padding: 11, borderRadius: 10, border: "none", background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>Create →</button>
+            <div className="flex gap-3">
+              <button onClick={() => setShowCreate(false)} className="flex-1 py-3 text-xs font-black uppercase tracking-widest text-[#475569] hover:text-[#94a3b8] transition-colors">Abort</button>
+              <button onClick={handleCreateGroup} className="flex-1 py-3 bg-[#14b8c4] text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-cyan-500/10 active:scale-95 transition-all">Initiate →</button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "calc(100vh - 220px)" }}>
-        <div className="glass-card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", padding: "8px", gap: 4, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-0 lg:gap-6 overflow-hidden">
+        {/* Group Sidebar */}
+        <div className={`glass-card p-0 flex flex-col overflow-hidden border-white/5 ${!mobileShowList ? 'hidden lg:flex' : 'flex'}`}>
+          <div className="flex p-2 gap-1 border-b border-white/5 bg-black/20">
             {(["public", "private"] as const).map((t) => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-                background: tab === t ? "rgba(20,184,196,0.15)" : "transparent", color: tab === t ? "#14b8c4" : "#64748b",
-              }}>{t === "public" ? "🌐 Public" : "🔒 Private"}</button>
+              <button 
+                key={t} 
+                onClick={() => setTab(t)} 
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${tab === t ? "bg-[#14b8c4]/20 text-[#14b8c4] border border-[#14b8c4]/30 shadow-inner" : "text-[#64748b] hover:text-[#94a3b8]"}`}
+              >
+                {t}
+              </button>
             ))}
           </div>
-          <div style={{ flex: 1, overflowY: "auto" }}>
-            {displayedGroups.length === 0 ? <div style={{padding:20, color:"#94a3b8", textAlign:"center"}}>No groups found.</div> : displayedGroups.map((g) => (
-              <button key={g.id} onClick={() => setActiveGroup(g.id)} style={{
-                width: "100%", padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer",
-                background: activeGroup === g.id ? "rgba(20,184,196,0.1)" : "transparent",
-                borderBottom: "1px solid rgba(255,255,255,0.05)",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(20,184,196,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{g.visibility === "private" ? "🔒" : "🌍"}</div>
-                  <div style={{ flex: 1, overflow: "hidden" }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>{g.members?.length || 1} members</div>
-                  </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {displayedGroups.length === 0 ? (
+              <div className="p-10 text-center space-y-2 opacity-50 grayscale mt-10">
+                <div className="text-4xl">🛰️</div>
+                <div className="text-[10px] font-black uppercase tracking-widest">Scanning... 0 found</div>
+              </div>
+            ) : displayedGroups.map((g) => (
+              <button 
+                key={g.id} 
+                onClick={() => setActiveGroup(g.id)} 
+                className={`w-full p-4 flex items-center gap-4 transition-all border-b border-white/[0.03] ${activeGroup === g.id ? "bg-[#14b8c4]/10 border-l-4 border-l-[#14b8c4] shadow-inner" : "hover:bg-white/[0.03] border-l-4 border-l-transparent"}`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 ${g.visibility === "private" ? "bg-amber-500/10 text-amber-500" : "bg-cyan-500/10 text-cyan-400"}`}>
+                  {g.visibility === "private" ? "🔒" : "🌀"}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className={`font-black text-sm truncate tracking-tight ${activeGroup === g.id ? "text-cyan-400" : "text-[#f0f9fa]"}`}>{g.name}</div>
+                  <div className="text-[10px] font-bold text-[#475569] uppercase tracking-widest mt-0.5">{g.members?.length || 1} online</div>
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="glass-card" style={{ display: "flex", flexDirection: "column" }}>
+        {/* Chat window */}
+        <div className={`glass-card p-0 flex flex-col overflow-hidden relative ${mobileShowList ? 'hidden lg:flex' : 'flex'}`}>
           {activeGroupData ? (
             <>
-              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(20,184,196,0.1)", display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 24 }}>{activeGroupData.visibility === "private" ? "🔒" : "🌍"}</span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{activeGroupData.name}</div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>{activeGroupData.description || "Community Group"}</div>
+              {/* Header */}
+              <div className="p-4 md:px-6 md:py-4 border-b border-white/10 bg-black/20 flex items-center gap-4">
+                <button 
+                  onClick={() => setMobileShowList(true)} 
+                  className="lg:hidden p-2 -ml-2 text-[#14b8c4] hover:bg-[#14b8c4]/10 rounded-lg transition-colors"
+                >
+                  <span className="text-xl">←</span>
+                </button>
+                <div className={`w-10 h-10 rounded-xl hidden sm:flex items-center justify-center text-xl flex-shrink-0 ${activeGroupData.visibility === "private" ? "bg-amber-500/10 text-amber-500" : "bg-cyan-500/10 text-cyan-400"}`}>
+                  {activeGroupData.visibility === "private" ? "🔒" : "🌍"}
                 </div>
-                {activeGroupData.visibility === "private" && activeGroupData.ownerId === profile?.uid && (
-                  <button style={{ marginLeft: "auto", padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(20,184,196,0.3)", background: "transparent", color: "#14b8c4", fontSize: 12 }}>
-                    + Add Members
-                  </button>
-                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-sm md:text-base text-[#f0f9fa] tracking-tight truncate">{activeGroupData.name}</div>
+                  <div className="text-[10px] md:text-xs font-bold text-[#64748b] truncate uppercase tracking-widest">{activeGroupData.description || "Mission Comms"}</div>
+                </div>
               </div>
 
-              <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-                {messages.map((msg) => {
+              {/* Messages area */}
+              <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+                {messages.map((msg, idx) => {
                   const isMe = msg.senderId === profile?.uid;
+                  const showHeader = idx === 0 || messages[idx-1].senderId !== msg.senderId;
+                  
                   return (
-                    <div key={msg.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", alignSelf: isMe ? "flex-end" : "flex-start", maxWidth: "80%" }}>
-                      {!isMe && <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(20,184,196,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>👤</div>}
-                      <div>
-                        {!isMe && (
-                          <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: "#14b8c4" }}>{msg.senderName}</span>
-                          </div>
-                        )}
-                        <div style={{ fontSize: 14, color: isMe ? "#fff" : "#cbd5e1", marginTop: 4, background: isMe ? "linear-gradient(135deg,#14b8c4,#0f6b71)" : "rgba(255,255,255,0.05)", padding: "8px 12px", borderRadius: isMe ? "12px 4px 12px 12px" : "4px 12px 12px 12px" }}>{msg.content}</div>
-                        <div style={{ fontSize: 11, color: "#475569", marginTop: 4, textAlign: isMe ? "right" : "left" }}>
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <div key={msg.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                      {!isMe && showHeader && (
+                        <div className="flex items-center gap-2 mb-1 px-1">
+                          <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">{msg.senderName}</span>
                         </div>
+                      )}
+                      <div className={`
+                         max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-[13px] md:text-sm font-medium leading-relaxed
+                         ${isMe 
+                           ? "bg-gradient-to-br from-[#14b8c4] to-[#0f6b71] text-white rounded-tr-none shadow-lg shadow-[#14b8c4]/10" 
+                           : "bg-white/5 text-slate-200 border border-white/5 rounded-tl-none"}
+                      `}>
+                        {msg.content}
+                      </div>
+                      <div className="text-[9px] font-black text-[#475569] uppercase tracking-tighter mt-1 px-1">
+                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   );
@@ -188,17 +206,31 @@ export default function CommunityPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(20,184,196,0.1)", display: "flex", gap: 10 }}>
-                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendMsg()}
-                  placeholder={`Message ${activeGroupData.name}…`}
-                  style={{ flex: 1, padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(20,184,196,0.2)", background: "rgba(255,255,255,0.05)", color: "#f0f9fa", fontSize: 14, outline: "none" }}
-                />
-                <button onClick={sendMsg} style={{ padding: "11px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>→</button>
+              {/* Input area */}
+              <div className="p-4 md:p-6 bg-black/20 border-t border-white/5 space-y-2">
+                <div className="flex gap-3">
+                  <input 
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)} 
+                    onKeyDown={(e) => e.key === "Enter" && sendMsg()}
+                    placeholder="Enter mission updates..."
+                    className="flex-1 px-5 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-sm font-medium outline-none focus:border-[#14b8c4]/50 focus:ring-1 focus:ring-[#14b8c4]/20 transition-all text-[#f0f9fa] placeholder:text-[#475569]"
+                  />
+                  <button 
+                    onClick={sendMsg} 
+                    disabled={!input.trim()}
+                    className="w-12 md:w-16 flex items-center justify-center bg-[#14b8c4] text-white rounded-2xl shadow-xl shadow-cyan-500/10 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale"
+                  >
+                    <span className="text-2xl">→</span>
+                  </button>
+                </div>
               </div>
             </>
           ) : (
-             <div style={{flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8"}}>
-                Select a group to start messaging
+             <div className="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
+                <div className="text-7xl mb-6 grayscale animate-pulse">📡</div>
+                <h3 className="text-lg font-black text-[#f0f9fa] uppercase tracking-widest">Awaiting Link</h3>
+                <p className="text-sm font-medium text-[#94a3b8] max-w-xs mt-2">Activate a channel from the directory to establish a secure comms link.</p>
              </div>
           )}
         </div>

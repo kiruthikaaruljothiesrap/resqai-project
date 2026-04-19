@@ -1,8 +1,8 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { logIn, resetPassword, logInWithGoogle, getUserProfile, logOut } from "@/lib/auth";
+import { logIn, resetPassword, logInWithGoogle, logOut } from "@/lib/auth";
 import { getDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Suspense } from "react";
@@ -31,22 +31,19 @@ function LoginPageContent() {
       
       if (!profile) throw new Error("Profile data not found.");
 
-      // Check role constraints
       if (profile.role !== role && role !== "admin") {
          throw new Error(`This account belongs to a ${profile.role}, not ${role}. Please go back and select the correct role.`);
       }
 
-      // Check NGO Status Approval
       if (profile.role === "ngo" && profile.status === "pending_verification") {
         await logOut();
-        throw new Error("Your NGO account is still pending verification by the admin team. We will notify you once approved.");
+        throw new Error("Your NGO account is still pending verification by the admin team.");
       }
       if (profile.role === "ngo" && profile.status === "rejected") {
         await logOut();
-        throw new Error("Your NGO account was rejected due to invalid certificate details. Please contact support.");
+        throw new Error("Your NGO account was rejected due to invalid certificate details.");
       }
 
-      // Redirect depending on role
       if (profile.role === "ngo") router.push("/ngo/dashboard");
       else if (profile.role === "admin") router.push("/admin/dashboard");
       else router.push("/volunteer/dashboard");
@@ -68,103 +65,108 @@ function LoginPageContent() {
     }
   };
 
+  const roleColor = role === "admin" ? "text-rose-500" : (role === "ngo" ? "text-amber-500" : "text-cyan-400");
+  const roleBg = role === "admin" ? "from-rose-500 to-rose-700" : (role === "ngo" ? "from-amber-500 to-amber-700" : "from-cyan-500 to-cyan-700");
+
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-      background: "radial-gradient(ellipse at 60% 60%, #0f3a3e 0%, #060d10 60%)",
-    }}>
-      <div className="glass-card fade-up" style={{ width: "100%", maxWidth: 440, padding: 40 }}>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_60%_60%,_#0f3a3e_0%,_#060d10_60%)]">
+      <div className="glass-card w-full max-w-md p-8 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src="/logo.png" alt="ResQAI" style={{ width: 64, height: 64, borderRadius: 14, objectFit: "contain", marginBottom: 10 }} />
-          <h1 style={{ fontSize: 28, fontWeight: 800 }}>
-            <span className="gradient-text">Welcome Back</span>
+        <div className="text-center mb-10">
+          <div className="inline-block p-4 bg-white/5 rounded-[20px] mb-6 shadow-2xl ring-1 ring-white/10">
+            <img src="/logo.png" alt="ResQAI" className="w-12 h-12 object-contain" />
+          </div>
+          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">
+            Welcome <span className="text-cyan-400">Back</span>
           </h1>
-          <p style={{ color: "#94a3b8", fontSize: 14, marginTop: 8 }}>
-            Signing in as <span style={{ color: role === "admin" ? "#e11d48" : (role === "ngo" ? "#f59e0b" : "#14b8c4"), textTransform: "capitalize", fontWeight: 600 }}>{role}</span>
+          <p className="text-sm text-[#94a3b8] font-bold mt-3 uppercase tracking-widest">
+            Identity: <span className={`${roleColor}`}>{role}</span>
           </p>
         </div>
 
         {!forgotMode ? (
-          <form onSubmit={handleLogin}>
-            <InputField label="Email / Username / Phone No" type="text" value={email} onChange={setEmail} placeholder="email, @username, or +91 phone" />
-            <div style={{ position: "relative" }}>
-              <InputField label="Password" type={showPass ? "text" : "password"} value={password} onChange={setPassword} placeholder="••••••••" />
-              <button type="button" onClick={() => setShowPass(!showPass)} style={{
-                position: "absolute", right: 14, top: 38, background: "none", border: "none",
-                color: "#64748b", cursor: "pointer", fontSize: 14,
-              }}>{showPass ? "🙈" : "👁️"}</button>
+          <form onSubmit={handleLogin} className="space-y-6">
+            <InputField label="Identity (Email/Username)" type="text" value={email} onChange={setEmail} placeholder="you@example.com" />
+            <div className="relative">
+              <InputField label="Access Key (Password)" type={showPass ? "text" : "password"} value={password} onChange={setPassword} placeholder="••••••••" />
+              <button 
+                type="button" 
+                onClick={() => setShowPass(!showPass)} 
+                className="absolute right-4 top-10 text-slate-500 hover:text-cyan-400 transition-colors"
+              >
+                {showPass ? "🙈" : "👁️"}
+              </button>
             </div>
 
-            {error && <p style={{ color: "#f87171", fontSize: 13, marginBottom: 12 }}>⚠️ {error}</p>}
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-bold text-red-500 flex items-center gap-2">
+                <span>⚠️</span> {error}
+              </div>
+            )}
 
-            <button type="submit" disabled={loading} style={btnStyle}>
-              {loading ? "Signing in…" : "Sign In →"}
+            <button type="submit" disabled={loading} className={`w-full py-4 rounded-xl text-white font-black uppercase tracking-widest transition-all transform active:scale-[0.98] shadow-xl bg-gradient-to-r ${roleBg} shadow-black/40`}>
+              {loading ? "Decrypting..." : "Establish Link →"}
             </button>
 
-            <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: 12 }}>
-              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
-              <span style={{ fontSize: 12, color: "#64748b" }}>OR</span>
-              <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.1)" }} />
+            <div className="flex items-center gap-4 my-8">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Auth Proxy</span>
+              <div className="flex-1 h-px bg-white/10" />
             </div>
 
             <button
               type="button"
               onClick={async () => {
                 try {
-                  const user = await logInWithGoogle(role as "volunteer" | "ngo");
-                  const profile = await getUserProfile(user.uid);
-                  router.push(`/${profile?.role || role}/dashboard`);
+                  const googleUser = await logInWithGoogle(role as "volunteer" | "ngo");
+                  router.push(`/${role}/dashboard`);
                 } catch (err: any) {
-                  setError(err.message || "Google sign-in failed.");
+                  setError(err.message || "Google link failed.");
                 }
               }}
-              style={{
-                width: "100%", padding: "12px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)",
-                background: "rgba(255,255,255,0.05)", color: "#f0f9fa", fontWeight: 600, fontSize: 14,
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10
-              }}
+              className="w-full py-4 px-6 bg-white/5 border border-white/10 rounded-xl text-[#f0f9fa] text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-3 active:scale-[0.98]"
             >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style={{ width: 18 }} />
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5" />
               Sign in with Google
             </button>
 
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 24, fontSize: 13 }}>
-              <button type="button" onClick={() => setForgotMode(true)} style={{ background: "none", border: "none", color: "#14b8c4", cursor: "pointer" }}>
-                Forgot password?
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 text-[11px] font-black uppercase tracking-widest">
+              <button type="button" onClick={() => setForgotMode(true)} className="text-[#14b8c4] hover:text-cyan-300 transition-colors">
+                Lost Key?
               </button>
-              <Link href={`/auth/signup?role=${role}`} style={{ color: "#14b8c4" }}>
-                Create account
+              <Link href={`/auth/signup?role=${role}`} className="text-[#14b8c4] hover:text-cyan-300 transition-colors">
+                Create Identity
               </Link>
             </div>
 
-            <div style={{ textAlign: "center", marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-              <Link href="/role-select" style={{ color: "#475569", fontSize: 13 }}>← Switch role</Link>
+            <div className="text-center pt-8 border-t border-white/5">
+              <Link href="/role-select" className="text-slate-600 hover:text-slate-400 text-[10px] font-black uppercase tracking-widest transition-colors flex items-center justify-center gap-2">
+                ← Return to Base
+              </Link>
             </div>
           </form>
         ) : (
-          <form onSubmit={handleReset}>
+          <form onSubmit={handleReset} className="space-y-6">
             {resetSent ? (
-              <div style={{ textAlign: "center", color: "#22c55e", padding: "20px 0" }}>
-                ✅ Reset email sent to <strong>{email}</strong>. Check your inbox.
+              <div className="text-center py-8 space-y-4">
+                <div className="text-5xl">📨</div>
+                <p className="text-sm font-bold text-green-500 bg-green-500/10 p-4 rounded-xl border border-green-500/20 leading-relaxed uppercase tracking-tighter">
+                  Reset frequency sent to <br/><span className="text-[#f0f9fa]">{email}</span>
+                </p>
               </div>
             ) : (
               <>
-                <p style={{ color: "#94a3b8", fontSize: 14, marginBottom: 20 }}>
-                  Enter your email and we'll send a password reset link.
+                <p className="text-sm text-[#94a3b8] font-medium text-center mb-6 leading-relaxed">
+                  Enter your registered comms address to receive a recovery link.
                 </p>
-                <InputField label="Email Address" type="email" value={email} onChange={setEmail} placeholder="you@example.com" />
-                {error && <p style={{ color: "#f87171", fontSize: 13 }}>⚠️ {error}</p>}
-                <button type="submit" style={btnStyle}>Send Reset Link</button>
+                <InputField label="Comms Address (Email)" type="email" value={email} onChange={setEmail} placeholder="you@network.com" />
+                {error && <p className="text-xs font-bold text-red-500">⚠️ {error}</p>}
+                <button type="submit" className="w-full py-4 bg-cyan-500 text-white rounded-xl font-black uppercase tracking-widest shadow-xl shadow-cyan-500/10 active:scale-95 transition-all">Recover Account</button>
               </>
             )}
             <button type="button" onClick={() => { setForgotMode(false); setResetSent(false); setError(""); }}
-              style={{ background: "none", border: "none", color: "#14b8c4", cursor: "pointer", marginTop: 12, fontSize: 13 }}>
-              ← Back to login
+              className="w-full text-center text-[#14b8c4] text-xs font-black uppercase tracking-widest pt-4">
+              ← Back to Decryption
             </button>
           </form>
         )}
@@ -175,7 +177,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div style={{ color: "#fff", padding: 24 }}>Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-cyan-400 font-black animate-pulse uppercase tracking-[0.2em]">Establishing link...</div>}>
       <LoginPageContent />
     </Suspense>
   );
@@ -186,42 +188,16 @@ function InputField({ label, type, value, onChange, placeholder }: {
   onChange: (v: string) => void; placeholder: string;
 }) {
   return (
-    <div style={{ marginBottom: 16 }}>
-      <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>{label}</label>
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        style={{
-          width: "100%",
-          padding: "11px 14px",
-          background: "rgba(255,255,255,0.05)",
-          border: "1px solid rgba(20,184,196,0.2)",
-          borderRadius: 10,
-          color: "#f0f9fa",
-          fontSize: 15,
-          outline: "none",
-          transition: "border-color 0.2s",
-        }}
-        onFocus={(e) => (e.target.style.borderColor = "#14b8c4")}
-        onBlur={(e) => (e.target.style.borderColor = "rgba(20,184,196,0.2)")}
+        className="w-full px-5 py-3.5 bg-[#060d10] border border-white/10 rounded-xl text-white text-sm font-medium outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 transition-all placeholder:text-slate-800"
       />
     </div>
   );
 }
-
-const btnStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "13px",
-  borderRadius: 10,
-  border: "none",
-  background: "linear-gradient(135deg, #14b8c4, #0f6b71)",
-  color: "#fff",
-  fontWeight: 700,
-  fontSize: 16,
-  cursor: "pointer",
-  marginTop: 8,
-  transition: "opacity 0.2s",
-};

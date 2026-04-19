@@ -23,17 +23,24 @@ const navItems = [
   { href: "/volunteer/community", icon: "👥", key: "community" },
 ];
 
+const mobileNavItems = [
+  { href: "/volunteer/dashboard", icon: "🏠", key: "dashboard" },
+  { href: "/volunteer/feed", icon: "🌟", key: "feed" },
+  { href: "/volunteer/map", icon: "🗺️", key: "map" },
+  { href: "/volunteer/chat", icon: "💬", key: "chat" },
+  { href: "/volunteer/profile", icon: "👤", key: "profile" },
+];
+
 export default function VolunteerLayout({ children }: { children: React.ReactNode }) {
   const t = useTranslations("Common");
   const pathname = usePathname();
   const router = useRouter();
   const { profile } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile: closed by default
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // Initialize status from profile if available
   const [status, setStatus] = useState<"online" | "busy" | "offline">(
     (profile?.status as any) || "online"
   );
@@ -49,7 +56,6 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
       const unsub = subscribeToNotifications(profile.uid, setNotifications);
       requestFirebaseNotificationPermission(profile.uid);
       const unsubFCM = onForegroundMessage((payload) => {
-         // Show elegant foreground toast or alert here
          console.log("FCM foreground msg:", payload);
       });
       return () => { unsub(); unsubFCM(); };
@@ -67,45 +73,43 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
     }
   };
 
-  const statusColors = { online: "#22c55e", busy: "#eab308", offline: "#374151" };
+  const statusColors = { online: "bg-green-500", busy: "bg-yellow-500", offline: "bg-gray-600" };
   const statusLabels = { online: t("online"), busy: t("busy"), offline: t("offline") };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#060d10" }}>
+    <div className="flex min-h-screen bg-[#060d10] text-[#f0f9fa] overflow-x-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside style={{
-        width: sidebarOpen ? 240 : 0,
-        minWidth: sidebarOpen ? 240 : 0,
-        overflow: "hidden",
-        background: "#0d1f24",
-        borderRight: "1px solid rgba(20,184,196,0.12)",
-        display: "flex",
-        flexDirection: "column",
-        transition: "all 0.3s ease",
-        position: "sticky",
-        top: 0,
-        height: "100vh",
-      }}>
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-[#0d1f24] border-r border-[#14b8c4]/10 
+        transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0
+        ${sidebarOpen ? "translate-x-0 shadow-2xl shadow-[#14b8c4]/5" : "-translate-x-full"}
+        flex flex-col
+      `}>
         {/* Logo */}
-        <div style={{ padding: "20px 20px 14px", borderBottom: "1px solid rgba(20,184,196,0.1)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <img src="/logo.png" alt="ResQAI Logo" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "contain" }} />
+        <div className="p-5 border-b border-[#14b8c4]/10">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="ResQAI" className="w-10 h-10 rounded-xl object-contain" />
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: "#f0f9fa" }}>ResQAI</div>
-              <div style={{ fontSize: 11, color: "#14b8c4" }}>Volunteer Portal</div>
+              <div className="font-extrabold text-base tracking-tight text-[#f0f9fa]">ResQAI</div>
+              <div className="text-[10px] uppercase tracking-widest font-bold text-[#14b8c4]">Volunteer Portal</div>
             </div>
           </div>
         </div>
 
-        {/* Status selector directly saves to Firebase */}
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(20,184,196,0.08)" }}>
+        {/* Status selector */}
+        <div className="p-4 border-b border-[#14b8c4]/5">
           <select
             value={status}
             onChange={(e) => handleStatusChange(e.target.value as any)}
-            style={{
-              width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)",
-              borderRadius: 8, color: "#f0f9fa", fontSize: 13, padding: "8px 10px", cursor: "pointer",
-            }}
+            className="w-full bg-white/5 border border-[#14b8c4]/20 rounded-lg text-sm px-3 py-2 outline-none focus:border-[#14b8c4]/50 cursor-pointer"
           >
             <option value="online">🟢 {t("online")}</option>
             <option value="busy">🟡 {t("busy")}</option>
@@ -113,121 +117,157 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
           </select>
         </div>
 
-        {/* Nav */}
-        <nav style={{ flex: 1, padding: "12px 10px", overflowY: "auto" }}>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={`sidebar-item${pathname === item.href ? " active" : ""}`}>
-              <span style={{ fontSize: 18 }}>{item.icon}</span>
-              <span>{t(`sidebar.${item.key}`)}</span>
+            <Link 
+              key={item.href} 
+              href={item.href} 
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
+                ${pathname === item.href 
+                  ? "bg-[#14b8c4]/15 text-[#14b8c4] border border-[#14b8c4]/20" 
+                  : "text-[#94a3b8] hover:bg-white/5 hover:text-[#f0f9fa]"}`}
+            >
+              <span className="text-xl group-hover:scale-110 transition-transform">{item.icon}</span>
+              <span className="text-sm font-medium">{t(`sidebar.${item.key}`)}</span>
             </Link>
           ))}
         </nav>
 
         {/* Logout */}
-        <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(20,184,196,0.08)" }}>
+        <div className="p-4 mt-auto border-t border-[#14b8c4]/5">
           <button
             onClick={async () => { await logOut(); router.push("/role-select"); }}
-            className="sidebar-item"
-            style={{ width: "100%", background: "none", border: "none", color: "#f87171", cursor: "pointer" }}
+            className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-[#f87171] hover:bg-red-500/10 transition-all font-medium text-sm"
           >
-            <span>🚪</span> <span>{t("logout")}</span>
+            <span className="text-xl">🚪</span>
+            <span>{t("logout")}</span>
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         {/* Topbar */}
-        <header style={{
-          height: 60,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 20px",
-          background: "#0d1f24",
-          borderBottom: "1px solid rgba(20,184,196,0.12)",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-        }}>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 20 }}>
-            ☰
-          </button>
+        <header className="sticky top-0 z-30 h-16 flex items-center justify-between px-4 md:px-6 bg-[#0d1f24]/90 backdrop-blur-xl border-b border-[#14b8c4]/10">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSidebarOpen(true)} 
+              className="lg:hidden p-2 -ml-2 text-[#94a3b8] hover:text-[#f0f9fa] transition-colors"
+            >
+              <span className="text-2xl">☰</span>
+            </button>
+            <h2 className="hidden md:block font-bold text-lg text-[#14b8c4] capitalize">
+              {pathname.split("/").pop()?.replace("-", " ")}
+            </h2>
+          </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div className="flex items-center gap-2 md:gap-5">
             <LanguageSwitcher />
 
-            {/* Notifications Bell */}
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setNotifsOpen(!notifsOpen)} style={{ background: "none", border: "none", color: "#f0f9fa", fontSize: 20, cursor: "pointer", position: "relative" }}>
+            {/* Notifications */}
+            <div className="relative">
+              <button 
+                onClick={() => setNotifsOpen(!notifsOpen)} 
+                className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xl relative transition-all active:scale-90"
+              >
                 🔔
                 {notifications.filter(n => !n.isRead).length > 0 && (
-                  <span style={{ position: "absolute", top: -4, right: -4, background: "#ef4444", color: "#fff", fontSize: 10, borderRadius: 10, padding: "2px 6px", fontWeight: 800 }}>
+                  <span className="absolute -top-1 -right-1 bg-[#ef4444] text-[10px] font-black text-white px-1.5 py-0.5 rounded-full ring-4 ring-[#0d1f24]">
                     {notifications.filter(n => !n.isRead).length}
                   </span>
                 )}
               </button>
+              
               {notifsOpen && (
-                <div className="glass-card" style={{ position: "absolute", right: 0, top: 40, width: 300, zIndex: 200, padding: 0 }}>
-                  <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontWeight: 700 }}>Notifications</div>
-                  <div style={{ maxHeight: 300, overflowY: "auto", display: "flex", flexDirection: "column" }}>
-                    {notifications.length === 0 && <div style={{ padding: 16, color: "#64748b", fontSize: 13, textAlign: "center" }}>No notifications</div>}
-                    {notifications.map(n => (
-                      <div key={n.id} 
-                           onClick={() => { markNotificationRead(n.id); setNotifsOpen(false); if(n.link) router.push(n.link); }}
-                           style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.03)", background: n.isRead ? "transparent" : "rgba(20,184,196,0.1)", cursor: "pointer", transition: "background 0.2s" }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: n.isRead ? "#94a3b8" : "#f0f9fa", marginBottom: 4 }}>{n.title}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{n.body}</div>
-                        <div style={{ fontSize: 10, color: "#475569", marginTop: 4 }}>{new Date(n.createdAt).toLocaleDateString()}</div>
-                      </div>
-                    ))}
+                <>
+                  <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setNotifsOpen(false)} />
+                  <div className="absolute right-0 mt-3 w-[280px] md:w-[320px] bg-[#0d1f24] border border-[#14b8c4]/20 rounded-2xl shadow-2xl z-50 overflow-hidden glass-card">
+                    <div className="p-4 border-b border-white/5 font-bold flex justify-between items-center bg-[#14b8c4]/5">
+                      <span>Notifications</span>
+                      <span className="text-[10px] bg-[#14b8c4]/20 text-[#14b8c4] px-2 py-1 rounded-full">{notifications.length} Total</span>
+                    </div>
+                    <div className="max-h-[350px] overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-[#64748b] text-sm">All caught up! ✨</div>
+                      ) : (
+                        notifications.map(n => (
+                          <div key={n.id} 
+                               onClick={() => { markNotificationRead(n.id); setNotifsOpen(false); if(n.link) router.push(n.link); }}
+                               className={`p-4 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${!n.isRead ? "bg-[#14b8c4]/5" : ""}`}>
+                            <div className={`text-sm font-bold mb-1 ${!n.isRead ? "text-[#14b8c4]" : "text-[#94a3b8]"}`}>{n.title}</div>
+                            <p className="text-xs text-[#64748b] line-clamp-2">{n.body}</p>
+                            <span className="text-[10px] text-[#475569] mt-2 block">{new Date(n.createdAt).toLocaleTimeString()}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
 
-            {/* Status dot */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: statusColors[status] }} />
-              <span style={{ fontSize: 13, color: "#94a3b8" }}>{statusLabels[status]}</span>
-            </div>
-
-            {/* Avatar Dropdown */}
-            <div style={{ position: "relative" }}>
-              <div onClick={() => setProfileOpen(!profileOpen)} style={{
-                width: 32, height: 32, borderRadius: "50%",
-                background: "linear-gradient(135deg,#14b8c4,#f59e0b)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 16, cursor: "pointer", overflow: "hidden"
-              }}>
-                 {profile?.avatarUrl ? (
-                   profile.avatarUrl.startsWith("http") || profile.avatarUrl.startsWith("data:") ? (
-                     <img src={profile.avatarUrl} alt="User" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                   ) : (
-                     <span>{profile.avatarUrl}</span>
-                   )
-                 ) : "👤"}
+            {/* User Profile */}
+            <div className="relative group">
+              <div 
+                onClick={() => setProfileOpen(!profileOpen)} 
+                className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-[#14b8c4] to-[#f59e0b] p-[2px] cursor-pointer ring-0 hover:ring-2 ring-[#14b8c4]/50 transition-all active:scale-95"
+              >
+                <div className="w-full h-full rounded-[10px] bg-[#0d1f24] flex items-center justify-center overflow-hidden">
+                   {profile?.avatarUrl ? (
+                     profile.avatarUrl.length > 2 ? (
+                       <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                     ) : <span className="text-xl">{profile.avatarUrl}</span>
+                   ) : <span className="text-xl">👤</span>}
+                </div>
               </div>
 
               {profileOpen && (
-                <div className="glass-card" style={{ position: "absolute", right: 0, top: 40, width: 240, zIndex: 200, padding: "12px 0" }}>
-                  <div style={{ padding: "0 16px 12px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                    <div style={{ fontWeight: 700, color: "#f0f9fa" }}>{profile?.firstName}</div>
-                    <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>Volunteer</div>
+                <>
+                  <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setProfileOpen(false)} />
+                  <div className="absolute right-0 mt-3 w-56 bg-[#0d1f24] border border-[#14b8c4]/20 rounded-2xl shadow-2xl z-50 py-2 glass-card overflow-hidden">
+                    <div className="px-4 py-3 border-b border-white/5 bg-white/5">
+                      <div className="font-bold text-sm truncate">{profile?.firstName} {profile?.lastName}</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className={`w-2 h-2 rounded-full ${statusColors[status]}`} />
+                        <span className="text-[10px] text-[#94a3b8] font-bold uppercase tracking-widest">{statusLabels[status].replace("🟢", "").replace("🟡", "").replace("⚫", "")}</span>
+                      </div>
+                    </div>
+                    <Link href="/volunteer/profile" onClick={() => setProfileOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm text-[#f0f9fa] hover:bg-[#14b8c4]/10 transition-colors">
+                      👤 My Profile
+                    </Link>
+                    <button onClick={async () => { await logOut(); router.push("/role-select"); }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-[#f87171] hover:bg-red-500/10 transition-colors">
+                      🚪 Logout
+                    </button>
                   </div>
-                  <Link href="/volunteer/profile" onClick={() => setProfileOpen(false)} style={{ display: 'block', width: "100%", textAlign: "left", padding: "10px 16px", textDecoration: "none", color: "#f0f9fa", cursor: "pointer", fontSize: 13 }}>
-                    👤 View Profile
-                  </Link>
-                  <button onClick={async () => { await logOut(); router.push("/role-select"); }} style={{ width: "100%", textAlign: "left", padding: "10px 16px", background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: 13 }}>
-                    🚪 Logout
-                  </button>
-                </div>
+                </>
               )}
             </div>
           </div>
         </header>
 
-        <main style={{ flex: 1, padding: 24 }}>{children}</main>
+        {/* Main Content */}
+        <main className="flex-1 p-4 md:p-6 lg:p-8 pb-32 lg:pb-8 max-w-[1600px] mx-auto w-full">
+          {children}
+        </main>
+
+        {/* Mobile Bottom Navigation */}
+        <nav className="fixed bottom-4 left-4 right-4 z-50 h-16 bg-[#0d1f24]/90 backdrop-blur-xl border border-[#14b8c4]/20 rounded-2xl lg:hidden flex items-center justify-around px-2 shadow-2xl shadow-black/50">
+          {mobileNavItems.map((item) => (
+            <Link 
+              key={item.href} 
+              href={item.href}
+              className={`flex flex-col items-center justify-center gap-1 transition-all duration-300 p-2 rounded-xl
+                ${pathname === item.href 
+                  ? "text-[#14b8c4] bg-[#14b8c4]/10 -translate-y-1" 
+                  : "text-[#64748b] hover:text-[#94a3b8]"}`}
+            >
+              <span className="text-2xl">{item.icon}</span>
+              <span className="text-[10px] font-bold uppercase tracking-tight">{t(`sidebar.${item.key}`)}</span>
+            </Link>
+          ))}
+        </nav>
       </div>
     </div>
   );

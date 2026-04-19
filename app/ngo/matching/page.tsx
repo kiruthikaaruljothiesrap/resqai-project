@@ -5,13 +5,13 @@ import { subscribeToNeeds, subscribeToUsers, createTask, updateNeedStatus } from
 import { Need, Task } from "@/types";
 import { UserProfile } from "@/lib/auth";
 
-const priorityColors: Record<string, string> = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
-const statusColors: Record<string, string> = { online: "#22c55e", busy: "#eab308", offline: "#374151" };
+const priorityColors: Record<string, string> = { critical: "text-red-500", high: "text-orange-500", medium: "text-amber-500", low: "text-green-500" };
+const priorityBgs: Record<string, string> = { critical: "bg-red-500/10 ring-red-500/20", high: "bg-orange-500/10 ring-orange-500/20", medium: "bg-amber-500/10 ring-amber-500/20", low: "bg-green-500/10 ring-green-500/20" };
+const statusColors: Record<string, string> = { online: "bg-green-500", busy: "bg-amber-500", offline: "bg-slate-700" };
 
-// Haversine formula to calculate mock distance (in km) since we didn't rigorously set up bounds
 function getDistance(lat1?: number, lon1?: number, lat2?: number, lon2?: number) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 15; // default 15km if location unknown
-  const R = 6371; // Radius of the earth in km
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 15;
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;  
   const dLon = (lon2 - lon1) * Math.PI / 180; 
   const a = 
@@ -24,20 +24,15 @@ function getDistance(lat1?: number, lon1?: number, lat2?: number, lon2?: number)
 
 function matchScore(volunteer: UserProfile, need: Need) {
   let score = 0;
-  // Availability
   if (volunteer.status === "online") score += 40;
   else if (volunteer.status === "busy") score += 10;
   
-  // Skills Match
   const skills = need.requiredSkills || [];
-  const vSkills = [volunteer.volunteerType].filter(Boolean); // Only a single specialty exists for now. In prod, update to an array
+  const vSkills = [volunteer.volunteerType].filter(Boolean);
   if (skills.some(s => vSkills.includes(s))) score += 40;
 
-  // Proximity (Closer is better)
   const dist = getDistance(volunteer.location?.lat, volunteer.location?.lng, need.location.lat, need.location.lng);
-  score += Math.max(0, 20 - dist); // ~max 20 points
-  
-  // Score bonus
+  score += Math.max(0, 20 - dist);
   score += Math.min(20, (volunteer.score || 0) / 100);
   
   return { score: Math.round(Math.min(100, score)), distance: dist.toFixed(1) };
@@ -109,140 +104,169 @@ export default function SmartMatchingPage() {
         ngoId: n.ngoId,
         title: n.title,
         description: n.description,
-        status: "accepted", // the NGO directly assigns them
+        status: "accepted",
         points: 50,
         estimatedHours: 2,
       });
-      // Updating need status keeps it off the matching screen permanently
       await updateNeedStatus(n.id, "accepted" as any);
       setAssigned((prev) => ({ ...prev, [n.id]: v.uid }));
       setTimeout(() => setSelectedNeed(null), 1500);
     } catch(e) {
-      alert("Failed to assign volunteer.");
+      console.error(e);
     }
   }
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>Smart Matching</h1>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>AI-powered volunteer matching based on skills, location, and availability</p>
-      </div>
-
-      <div style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.12), rgba(245,158,11,0.08))", border: "1px solid rgba(99,102,241,0.25)", borderRadius: 12, padding: 16, marginBottom: 24, display: "flex", gap: 14, alignItems: "center" }}>
-        <div style={{ fontSize: 36 }}>🤖</div>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div style={{ fontWeight: 700, color: "#c7d2fe" }}>Smart Match Engine Active</div>
-          <div style={{ fontSize: 13, color: "#94a3b8" }}>Ranking volunteers by skill match (40%), proximity (30%), status (20%), and performance score (10%).</div>
+          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">Smart <span className="text-indigo-400">Matching</span></h1>
+          <p className="text-sm text-[#94a3b8] font-medium mt-1 uppercase tracking-widest text-[10px]">AI-powered candidate prioritization</p>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: 20 }}>
+      <div className="bg-gradient-to-r from-indigo-500/10 to-amber-500/10 border border-indigo-500/20 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-indigo-500/40 transition-all">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">🤖</div>
+        <div className="text-center sm:text-left">
+          <h3 className="text-lg font-black text-indigo-400 tracking-tight uppercase">Cognitive Heuristics Active</h3>
+          <p className="text-sm text-[#94a3b8] font-medium leading-relaxed">Ranking volunteers by <span className="text-cyan-400 font-bold uppercase text-[10px]">Skill match (40%)</span>, <span className="text-amber-500 font-bold uppercase text-[10px]">Proximity (30%)</span>, and <span className="text-green-500 font-bold uppercase text-[10px]">Live status (20%)</span>.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
         {/* Open Needs */}
-        <div>
-          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Open Needs</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {openNeeds.length === 0 ? <p style={{color:"#94a3b8"}}>No open needs to map.</p> : openNeeds.map((n) => (
-              <button key={n.id} onClick={() => setSelectedNeed(n.id)} style={{
-                padding: 18, borderRadius: 12, border: "1px solid",
-                borderColor: selectedNeed === n.id ? priorityColors[n.priority] : "rgba(255,255,255,0.08)",
-                background: selectedNeed === n.id ? `${priorityColors[n.priority]}12` : "rgba(13,31,36,0.8)",
-                cursor: "pointer", textAlign: "left",
-              }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <span style={{ fontSize: 24 }}>🆘</span>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: "#f0f9fa" }}>{n.title}</div>
-                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, color: priorityColors[n.priority], background: `${priorityColors[n.priority]}18` }}>{n.priority.toUpperCase()}</span>
-                      <span style={{ fontSize: 11, color: "#64748b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"150px" }}>📍 {n.location.address}</span>
+        <div className="xl:col-span-4 space-y-4">
+          <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4">Pending Incidents</h3>
+          <div className="grid grid-cols-1 gap-3">
+            {openNeeds.length === 0 ? (
+              <p className="text-[#94a3b8] italic text-xs uppercase tracking-widest bg-white/5 p-8 rounded-2xl text-center border border-white/5 opacity-40">No incidents requiring deployment.</p>
+            ) : openNeeds.map((n) => (
+              <button 
+                key={n.id} 
+                onClick={() => setSelectedNeed(n.id)} 
+                className={`
+                  p-6 rounded-2xl border transition-all text-left group relative overflow-hidden
+                  ${selectedNeed === n.id 
+                    ? `bg-indigo-500/20 border-indigo-400/50 ring-1 ring-indigo-400/20` 
+                    : `bg-white/5 border-white/5 hover:border-white/10`}
+                `}
+              >
+                <div className="flex gap-4 items-center relative z-10">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform ${selectedNeed === n.id ? 'bg-indigo-500/20' : 'bg-white/5'}`}>
+                    🆘
+                  </div>
+                  <div className="space-y-1 min-w-0">
+                    <div className="font-black text-white text-sm uppercase tracking-tight truncate">{n.title}</div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[9px] font-black uppercase tracking-widest ${priorityColors[n.priority]}`}>{n.priority}</span>
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest truncate">📍 {n.location.address}</span>
                     </div>
                   </div>
                 </div>
+                {selectedNeed === n.id && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent pointer-events-none" />
+                )}
               </button>
             ))}
           </div>
         </div>
 
         {/* Ranked Volunteers */}
-        {need && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 700 }}>Best Matches for: <span style={{ color: "#f59e0b" }}>{need.title}</span></h3>
-              <button 
-                onClick={() => handleAiAnalysis(need, ranked)} 
-                disabled={isAiAnalyzing || ranked.length === 0}
-                style={{ 
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", 
-                  border: "none", padding: "6px 14px", borderRadius: 8, fontSize: 12, 
-                  fontWeight: 700, cursor: isAiAnalyzing || ranked.length === 0 ? "not-allowed" : "pointer", 
-                  opacity: isAiAnalyzing ? 0.7 : 1, display: "flex", alignItems: "center", gap: 6 
-                }}
-              >
-                {isAiAnalyzing ? <span style={{ animation: "pulse 1.5s infinite" }}>🤖 Analyzing...</span> : "🤖 Ask ResQAI"}
-              </button>
-            </div>
-
-            {aiAnalysisText && (
-              <div style={{ background: "rgba(99,102,241,0.1)", borderLeft: "3px solid #8b5cf6", padding: 14, borderRadius: "0 8px 8px 0", marginBottom: 16 }}>
-                <p style={{ fontSize: 13, color: "#c7d2fe", lineHeight: 1.5 }}>
-                   <strong style={{ color: "#fff" }}>ResQAI Recommendation:</strong> {aiAnalysisText}
-                </p>
+        <div className="xl:col-span-8">
+          {need ? (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Deployment Recommendations: <span className="text-amber-500">{need.title}</span></h3>
+                <button 
+                  onClick={() => handleAiAnalysis(need, ranked)} 
+                  disabled={isAiAnalyzing || ranked.length === 0}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                >
+                  {isAiAnalyzing ? <span className="animate-pulse">🔄 Neural Processing...</span> : "🤖 Ask ResQAI Intelligence"}
+                </button>
               </div>
-            )}
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {ranked.map(({ v, score, distance }, idx) => (
-                <div key={v.uid} className="glass-card" style={{ padding: 18 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    {/* Rank */}
-                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: idx === 0 ? "linear-gradient(135deg,#f59e0b,#d97706)" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: idx === 0 ? "#fff" : "#64748b", flexShrink: 0 }}>
-                      {idx + 1}
-                    </div>
-
-                    {/* Avatar & status */}
-                    <div style={{ position: "relative", flexShrink: 0 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(20,184,196,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-                        {v.avatarUrl ? <img src={v.avatarUrl} alt="avatar" style={{width:"100%", height:"100%", borderRadius:"50%", objectFit:"cover"}}/> : "👤"}
-                      </div>
-                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: statusColors[v.status] || statusColors.offline, border: "2px solid #0d1f24" }} />
-                    </div>
-
-                    {/* Info */}
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{v.firstName} {v.lastName} {idx === 0 && <span style={{ fontSize: 12, color: "#f59e0b" }}>⭐ Best Match</span>}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>{v.volunteerType || "General"} · {distance}km away · 🏆 {v.score || 0} pts</div>
-                    </div>
-
-                    {/* Match score */}
-                    <div style={{ textAlign: "center", flexShrink: 0 }}>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: score > 75 ? "#22c55e" : score > 50 ? "#f59e0b" : "#f97316" }}>{score}%</div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>match</div>
+              {aiAnalysisText && (
+                <div className="bg-indigo-500/5 border border-indigo-500/20 p-6 rounded-2xl animate-in slide-in-from-top-2 duration-500">
+                  <div className="flex gap-4 items-start">
+                    <span className="text-2xl mt-1">🧠</span>
+                    <div>
+                      <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-2">Tactical Assessment Report</h4>
+                      <p className="text-sm text-[#c7d2fe] font-medium leading-relaxed italic">
+                        "{aiAnalysisText}"
+                      </p>
                     </div>
                   </div>
-
-                  {/* Match bar */}
-                  <div style={{ marginTop: 12, background: "rgba(255,255,255,0.06)", borderRadius: 999, height: 5 }}>
-                    <div style={{ width: `${score}%`, height: "100%", background: score > 75 ? "linear-gradient(90deg,#22c55e,#14b8c4)" : "linear-gradient(90deg,#f59e0b,#f97316)", borderRadius: 999 }} />
-                  </div>
-
-                  {assigned[need.id] === v.uid ? (
-                    <div style={{ marginTop: 10, color: "#22c55e", fontWeight: 600, fontSize: 13 }}>✅ Assigned!</div>
-                  ) : (
-                    <button onClick={() => handleAssign(v, need)} style={{
-                      marginTop: 12, padding: "8px 20px", borderRadius: 9, border: "none",
-                      background: idx === 0 ? "linear-gradient(135deg,#22c55e,#16a34a)" : "rgba(20,184,196,0.12)",
-                      color: idx === 0 ? "#fff" : "#14b8c4", fontWeight: 600, cursor: "pointer", fontSize: 13,
-                    }}>
-                      {idx === 0 ? "⚡ Auto-Assign" : "Assign"} →
-                    </button>
-                  )}
                 </div>
-              ))}
-              {ranked.length === 0 && <p style={{color: "#94a3b8"}}>No volunteers found.</p>}
+              )}
+
+              <div className="grid grid-cols-1 gap-4">
+                {ranked.map(({ v, score, distance }, idx) => (
+                  <div key={v.uid} className={`glass-card p-6 md:p-8 group hover:border-indigo-500/30 transition-all ${idx === 0 ? 'ring-1 ring-amber-500/30' : ''}`}>
+                    <div className="flex flex-col sm:flex-row items-center gap-6">
+                      {/* Rank/Score Circle */}
+                      <div className="relative shrink-0">
+                        <svg className="w-20 h-20 transform -rotate-90">
+                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
+                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="4" fill="transparent" 
+                            strokeDasharray={226} strokeDashoffset={226 - (226 * score) / 100}
+                            className={`${score > 75 ? 'text-green-500' : score > 50 ? 'text-amber-500' : 'text-orange-500'} transition-all duration-1000 ease-out`} />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-lg font-black text-white">{score}%</span>
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest -mt-1">Match</span>
+                        </div>
+                      </div>
+
+                      {/* Profile */}
+                      <div className="flex-1 min-w-0 text-center sm:text-left">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                          <h4 className="text-lg font-black text-white uppercase tracking-tight truncate">{v.firstName} {v.lastName}</h4>
+                          {idx === 0 && <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black px-3 py-1 rounded-lg border border-amber-500/20 uppercase tracking-widest inline-block mx-auto sm:mx-0">⭐ Primary Target</span>}
+                        </div>
+                        <div className="flex flex-wrap justify-center sm:justify-start gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                          <span className="flex items-center gap-1.5"><span className={statusColors[v.status] + " w-2 h-2 rounded-full"} /> {v.status}</span>
+                          <span className="flex items-center gap-1.5"><span className="text-indigo-400">🛡️</span> {v.volunteerType}</span>
+                          <span className="flex items-center gap-1.5"><span className="text-cyan-400">📍</span> {distance}KM Away</span>
+                          <span className="flex items-center gap-1.5"><span className="text-amber-500">🏆</span> {v.score || 0} PX</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="shrink-0 w-full sm:w-auto">
+                        {assigned[need.id] === v.uid ? (
+                          <div className="bg-green-500/10 border border-green-500/20 text-green-500 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-center">
+                            Deployment Active ✓
+                          </div>
+                        ) : (
+                          <button onClick={() => handleAssign(v, need)} className={`
+                            w-full sm:w-auto px-8 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                            ${idx === 0 ? 'bg-gradient-to-r from-green-500 to-green-700 text-white shadow-lg shadow-green-500/20 active:scale-95' : 'bg-white/5 border border-white/10 text-cyan-400 hover:bg-cyan-500/10'}
+                          `}>
+                            {idx === 0 ? "⚡ Auto-Deploy" : "Assign Mission"} →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {ranked.length === 0 && (
+                  <div className="glass-card p-12 text-center text-[#94a3b8] font-bold uppercase tracking-widest text-xs italic opacity-40">
+                    No compatible volunteers detected in local radius. Expansion required.
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="glass-card p-20 flex flex-col items-center justify-center text-center space-y-6 opacity-60">
+              <div className="text-6xl animate-pulse">📡</div>
+              <div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Waiting for Command</h3>
+                <p className="text-sm text-[#94a3b8] font-medium max-w-sm mx-auto">Select a pending requirement from the left sector to initialize neural matching algorithms.</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

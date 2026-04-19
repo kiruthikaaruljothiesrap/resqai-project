@@ -36,33 +36,32 @@ export default function TasksPage() {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>My Tasks</h1>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>Accept or reject assignments and submit proof of completion</p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">Active <span className="text-cyan-400">Missions</span></h1>
+          <p className="text-sm text-[#94a3b8] font-medium mt-1 uppercase tracking-widest text-[10px]">Track and execute assigned tasks</p>
+        </div>
       </div>
 
       {/* Proof Upload Modal */}
       {uploadModal && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300,
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-          <div className="glass-card" style={{ width: 480, padding: 32 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Upload Task Proof</h2>
-            <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 20 }}>
-              Upload images, videos, or documents as proof of task completion. (Mocked file upload)
-            </p>
-            <div style={{
-              border: "2px dashed rgba(20,184,196,0.3)", borderRadius: 12, padding: 32,
-              textAlign: "center", marginBottom: 16, cursor: "pointer",
-              background: "rgba(20,184,196,0.04)",
-            }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>📄</div>
-              <p style={{ color: "#94a3b8", fontSize: 14 }}>Drag & drop files here or</p>
-              <label style={{ color: "#14b8c4", cursor: "pointer", fontSize: 14 }}>
-                browse files
-                <input type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx" style={{ display: "none" }}
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-card w-full max-w-lg p-8 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-xl font-black text-white tracking-tight uppercase">Upload Mission Proof</h2>
+                <p className="text-xs text-[#94a3b8] font-bold mt-1 uppercase tracking-widest">Protocol validation required</p>
+              </div>
+              <button onClick={() => setUploadModal(null)} className="text-slate-500 hover:text-white transition-colors text-2xl">×</button>
+            </div>
+            
+            <div className="border-2 border-dashed border-cyan-500/20 bg-cyan-500/5 rounded-2xl p-10 text-center mb-6 group hover:border-cyan-500/40 transition-all cursor-pointer">
+              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">📤</div>
+              <p className="text-sm text-[#94a3b8] font-bold mb-4 uppercase tracking-widest">Uplink media files</p>
+              <label className="bg-cyan-500 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest cursor-pointer hover:bg-cyan-400 active:scale-95 transition-all">
+                Select Files
+                <input type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx" className="hidden"
                   onChange={(e) => {
                     const files = Array.from(e.target.files || []).map((f) => f.name);
                     setUploadedFiles((prev) => ({ ...prev, [uploadModal]: files }));
@@ -70,100 +69,109 @@ export default function TasksPage() {
                 />
               </label>
               {uploadedFiles[uploadModal]?.length > 0 && (
-                <div style={{ marginTop: 12 }}>
+                <div className="mt-6 space-y-2">
                   {uploadedFiles[uploadModal].map((f) => (
-                    <div key={f} style={{ fontSize: 13, color: "#22c55e" }}>✓ {f}</div>
+                    <div key={f} className="text-[10px] font-black text-green-400 bg-green-400/10 px-3 py-1.5 rounded-lg border border-green-400/20 flex items-center justify-center gap-2 uppercase tracking-widest">
+                      ✓ {f}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => setUploadModal(null)} style={{
-                flex: 1, padding: "11px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)",
-                background: "transparent", color: "#94a3b8", cursor: "pointer", fontWeight: 600,
-              }}>Cancel</button>
-              <button onClick={() => submitProof(uploadModal)} style={{
-                flex: 1, padding: "11px", borderRadius: 10, border: "none",
-                background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff",
-                cursor: "pointer", fontWeight: 700,
-              }}>Submit Proof ✓</button>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button onClick={() => setUploadModal(null)} className="py-3.5 rounded-xl border border-white/10 text-[#94a3b8] text-xs font-black uppercase tracking-widest hover:bg-white/5 transition-all">
+                Abort
+              </button>
+              <button onClick={() => submitProof(uploadModal)} className="py-3.5 rounded-xl bg-gradient-to-r from-green-500 to-green-700 text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all">
+                Transmit Proof ✓
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="grid grid-cols-1 gap-4">
         {tasks
           .filter(t => t.status !== "completed" && t.status !== "rejected")
           .filter((t, idx, arr) => arr.findIndex(x => x.id === t.id) === idx)
           .length === 0 ? (
-          <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>No active tasks. Check the Map to find nearby needs!</div>
+          <div className="glass-card p-12 text-center text-[#94a3b8] font-bold uppercase tracking-widest text-xs italic opacity-60">
+            No active mission deployments detected. Check deployment map.
+          </div>
         ) : tasks
           .filter(t => t.status !== "completed" && t.status !== "rejected")
           .filter((t, idx, arr) => arr.findIndex(x => x.id === t.id) === idx)
           .map((task) => {
           const st = task.status;
           return (
-            <div key={task.id} className="glass-card" style={{ padding: 22 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
-                <div style={{ display: "flex", gap: 14 }}>
-                  <div style={{
-                    width: 52, height: 52, borderRadius: 12, fontSize: 26,
-                    background: `rgba(20,184,196,0.18)`,
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>📝</div>
+            <div key={task.id} className="glass-card p-6 md:p-8 hover:border-cyan-500/30 transition-all group">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
+                <div className="flex gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-3xl shrink-0 group-hover:scale-110 group-hover:rotate-3 transition-transform">
+                    {st === "proof_submitted" ? "💾" : "📝"}
+                  </div>
                   <div>
-                    <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{task.title}</h3>
-                    <p style={{ fontSize: 13, color: "#64748b" }}>NGO Reference: {task.ngoId}</p>
-                    <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>{task.description}</p>
+                    <h3 className="text-lg font-black text-white tracking-tight uppercase group-hover:text-cyan-400 transition-colors">{task.title}</h3>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 mt-1">Source: <span className="text-slate-400">{task.ngoId}</span></p>
+                    <p className="text-sm text-[#94a3b8] font-medium leading-relaxed line-clamp-2 md:line-clamp-none max-w-2xl">{task.description}</p>
                   </div>
                 </div>
-                <span style={{
-                  padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 700,
-                  color: "#14b8c4", background: `rgba(20,184,196,0.18)`,
-                }}>{st.replace("_", " ").toUpperCase()}</span>
+                <div className="flex flex-col items-end gap-3 shrink-0 w-full md:w-auto">
+                  <span className={`
+                    px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ring-1
+                    ${st === "pending" ? 'bg-amber-500/10 text-amber-500 ring-amber-500/20' : 
+                      st === "accepted" ? 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20' : 
+                      'bg-green-500/10 text-green-500 ring-green-500/20'}
+                  `}>
+                    {st.replace("_", " ")}
+                  </span>
+                  <div className="flex gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    <span className="flex items-center gap-1.5"><span className="text-amber-500">⭐</span> {task.points} PX</span>
+                    <span className="flex items-center gap-1.5"><span className="text-cyan-400">⏱️</span> {task.estimatedHours}H</span>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ display: "flex", gap: 20, fontSize: 13, color: "#94a3b8", marginBottom: 14 }}>
-                <span>⭐ {task.points} pts</span>
-                <span>⏱️ ~{task.estimatedHours}h</span>
-              </div>
-
-              {/* NGO Contact – show real contact info when accepted */}
               {(st === "accepted" || st === "proof_submitted") && (
-                <div style={{
-                  background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)",
-                  borderRadius: 10, padding: "12px 16px", marginBottom: 14,
-                }}>
-                  <div style={{ fontWeight: 700, color: "#22c55e", fontSize: 14, marginBottom: 8 }}>📞 Communication Channel Open</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                    <a href={`mailto:ngo-${task.ngoId}@resqai.org`} style={{ fontSize: 13, color: "#14b8c4", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      ✉️ Email NGO
+                <div className="bg-green-500/5 ring-1 ring-green-500/20 rounded-2xl p-6 mb-6">
+                  <div className="text-[10px] font-black text-green-500 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Secure Comms Uplink Established
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <a href={`mailto:ngo-${task.ngoId}@resqai.org`} className="flex items-center justify-center gap-3 px-4 py-3 bg-black/40 border border-white/5 rounded-xl text-xs font-black text-[#14b8c4] uppercase tracking-widest hover:bg-white/5 transition-all">
+                      ✉️ Comms Address
                     </a>
-                    <a href={`tel:+911234567890`} style={{ fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      📱 Call: +91-1234567890
+                    <a href={`tel:+911234567890`} className="flex items-center justify-center gap-3 px-4 py-3 bg-black/40 border border-white/5 rounded-xl text-xs font-black text-[#22c55e] uppercase tracking-widest hover:bg-white/5 transition-all">
+                      📱 Voice Proxy
                     </a>
-                    <a href={`https://wa.me/911234567890?text=Hi! I am working on task: ${task.title}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      💬 WhatsApp
+                    <a href={`https://wa.me/911234567890`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-3 px-4 py-3 bg-black/40 border border-white/5 rounded-xl text-xs font-black text-[#25D366] uppercase tracking-widest hover:bg-white/5 transition-all">
+                      💬 Neutral Net
                     </a>
                   </div>
                 </div>
               )}
 
-              {/* Actions */}
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div className="flex items-center gap-4">
                 {st === "pending" && (
-                  <>
-                    <button onClick={() => accept(task.id)} style={acceptBtnStyle}>✅ Accept Task</button>
-                    <button onClick={() => reject(task.id)} style={rejectBtnStyle}>✕ Reject</button>
-                  </>
+                  <div className="grid grid-cols-2 gap-3 w-full md:w-auto">
+                    <button onClick={() => accept(task.id)} className="px-8 py-3.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all">
+                      Accept
+                    </button>
+                    <button onClick={() => reject(task.id)} className="px-8 py-3.5 border border-red-500/20 text-red-500 flex items-center justify-center rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-500/5 active:scale-95 transition-all">
+                      Decline
+                    </button>
+                  </div>
                 )}
                 {st === "accepted" && (
-                  <button onClick={() => setUploadModal(task.id)} style={primaryBtnStyle}>📤 Upload Proof</button>
+                  <button onClick={() => setUploadModal(task.id)} className="w-full md:w-auto px-10 py-3.5 bg-gradient-to-r from-cyan-500 to-cyan-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
+                    Establish Completion Proof
+                  </button>
                 )}
                 {st === "proof_submitted" && (
-                  <div style={{ color: "#22c55e", fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
-                    ✅ Proof submitted! Awaiting NGO validation.
+                  <div className="text-[10px] font-black text-green-500 uppercase tracking-widest flex items-center gap-3 bg-green-500/5 px-4 py-3 rounded-xl border border-green-500/10">
+                    <span className="text-lg">✓</span> Proof Transmitted. Awaiting NGO Neutralization.
                   </div>
                 )}
               </div>
@@ -174,18 +182,3 @@ export default function TasksPage() {
     </div>
   );
 }
-
-const acceptBtnStyle: React.CSSProperties = {
-  padding: "10px 24px", borderRadius: 10, border: "none",
-  background: "linear-gradient(135deg,#22c55e,#16a34a)", color: "#fff",
-  fontWeight: 700, cursor: "pointer", fontSize: 14,
-};
-const rejectBtnStyle: React.CSSProperties = {
-  padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.3)",
-  background: "transparent", color: "#f87171", fontWeight: 700, cursor: "pointer", fontSize: 14,
-};
-const primaryBtnStyle: React.CSSProperties = {
-  padding: "10px 24px", borderRadius: 10, border: "none",
-  background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff",
-  fontWeight: 700, cursor: "pointer", fontSize: 14,
-};
