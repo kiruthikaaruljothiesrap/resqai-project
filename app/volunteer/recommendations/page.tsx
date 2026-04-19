@@ -4,8 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { subscribeToNeeds, createTask } from "@/lib/firestore";
 import { Need } from "@/types";
 
-const priorityColors: Record<string, string> = { critical: "text-red-500", high: "text-orange-500", medium: "text-amber-500", low: "text-green-500" };
-const priorityBgs: Record<string, string> = { critical: "bg-red-500/10 ring-red-500/20", high: "bg-orange-500/10 ring-orange-500/20", medium: "bg-amber-500/10 ring-amber-500/20", low: "bg-green-500/10 ring-green-500/20" };
+const priorityColors: Record<string, string> = { critical: "var(--rose-500)", high: "#f97316", medium: "var(--amber-500)", low: "var(--green-500)" };
+const priorityBg: Record<string, string> = { critical: "rgba(239, 68, 68, 0.1)", high: "rgba(249, 115, 22, 0.1)", medium: "rgba(245, 158, 11, 0.1)", low: "rgba(34, 197, 94, 0.1)" };
 
 export default function RecommendationsPage() {
   const { profile } = useAuth();
@@ -26,7 +26,7 @@ export default function RecommendationsPage() {
       await createTask({
         needId: need.id,
         volunteerId: profile.uid,
-        volunteerName: `${profile.firstName} V${Math.floor(Math.random() * 900) + 100}`,
+        volunteerName: profile.firstName + ' ' + (profile.lastName || ""),
         ngoId: need.ngoId,
         title: need.title,
         description: need.description,
@@ -37,135 +37,108 @@ export default function RecommendationsPage() {
       setAccepted(prev => [...prev, need.id]);
     } catch (e) {
       console.error(e);
+      alert("Failed to accept task.");
     }
   };
 
   const filtered = filter === "all" ? needs : needs.filter((r) => r.priority === filter);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">AI <span className="text-cyan-400">Matches</span></h1>
-          <p className="text-sm text-[#94a3b8] font-medium mt-1 uppercase tracking-widest text-[10px]">Neural-matched help requests near you</p>
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", gap: "var(--fluid-gap)" }}>
+      <header>
+        <h1>Recommendations</h1>
+        <p>Live AI-matched help requests near you based on your skills and location.</p>
+      </header>
+
+      {/* AI Info Banner - Fluid */}
+      <div style={{
+        background: "linear-gradient(135deg, rgba(99,102,241,0.1), rgba(20,184,196,0.05))",
+        border: "1px solid rgba(99,102,241,0.2)", borderRadius: "1rem",
+        padding: "1rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap"
+      }}>
+        <div style={{ fontSize: "2.5rem" }}>🤖</div>
+        <div style={{ flex: 1, minWidth: "200px" }}>
+          <div style={{ fontWeight: 700, color: "var(--indigo-500)", fontSize: "1rem" }}>AI-Matching Enabled</div>
+          <div style={{ fontSize: "0.85rem", color: "var(--text-secondary)" }}>ResQAI has prioritized these requests based on your profile.</div>
         </div>
       </div>
 
-      {/* AI Status Banner */}
-      <div className="bg-gradient-to-r from-indigo-500/10 to-cyan-400/10 border border-indigo-500/20 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 group hover:border-indigo-500/40 transition-all">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-4xl shadow-2xl group-hover:scale-110 transition-transform">🤖</div>
-        <div className="text-center sm:text-left">
-          <h3 className="text-lg font-black text-indigo-400 tracking-tight uppercase">Cognitive Matching Active</h3>
-          <p className="text-sm text-[#94a3b8] font-medium leading-relaxed">Requests are dynamically filtered based on your <span className="text-cyan-400 font-bold uppercase text-[10px]">Primary Directives</span> (Skills & Location).</p>
-        </div>
-      </div>
-
-      {/* Category Selection */}
-      <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar">
+      {/* Filter pills - Responsive Wrap */}
+      <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         {["all", "critical", "high", "medium", "low"].map((p) => (
-          <button 
-            key={p} 
-            onClick={() => setFilter(p)} 
-            className={`
-              px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border
-              ${filter === p 
-                ? 'bg-cyan-500 border-cyan-400 text-white shadow-lg shadow-cyan-500/20 active:scale-95' 
-                : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}
-            `}
-          >
-            {p === "all" ? "All Targets" : `${p} Priority`}
-          </button>
+          <button key={p} onClick={() => setFilter(p)} style={{
+            padding: "0.5rem 1.25rem", borderRadius: "999px", border: "1px solid",
+            borderColor: filter === p ? (p === "all" ? "var(--teal-500)" : priorityColors[p]) : "var(--border)",
+            background: filter === p ? (filter === "all" ? "rgba(20,184,196,0.1)" : priorityBg[p]) : "transparent",
+            color: filter === p ? (filter === "all" ? "var(--teal-300)" : priorityColors[p]) : "var(--text-secondary)",
+            fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", transition: "all 0.2s"
+          }}>{p === "all" ? "All Requests" : `${p.toUpperCase()} Priority`}</button>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      {/* Need Cards List */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {filtered.length === 0 ? (
-          <div className="glass-card p-20 text-center text-[#94a3b8] font-bold uppercase tracking-widest text-xs italic opacity-60">
-            No targets detected in current sector. Scan again later.
+          <div style={{ color: "var(--text-secondary)", padding: "3rem 1rem", textAlign: "center", border: "1px dashed var(--border)", borderRadius: "1rem" }}>
+            No matches found for this priority level.
           </div>
         ) : filtered.map((r) => (
-          <div 
-            key={r.id} 
-            className={`
-              glass-card p-6 md:p-10 group transition-all duration-300 relative overflow-hidden
-              ${accepted.includes(r.id) ? 'border-green-500/40 bg-green-500/5' : 'hover:border-cyan-500/30'}
-            `}
-          >
-            {/* Background Accent */}
-            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br transition-opacity opacity-0 group-hover:opacity-10 pointer-events-none ${prioBgGradient(r.priority)}`} />
-            
-            <div className="flex flex-col md:flex-row justify-between items-start gap-8 relative z-10">
-              <div className="flex flex-col sm:flex-row gap-6 w-full">
-                <div className={`
-                  w-16 h-16 rounded-2xl shrink-0 flex items-center justify-center text-4xl shadow-xl ring-1
-                  ${priorityBgs[r.priority] || 'bg-white/5 ring-white/10'}
-                `}>
-                  {r.priority === 'critical' ? '🚨' : '🤝'}
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-xl font-black text-white tracking-tight uppercase group-hover:text-cyan-400 transition-colors">{r.title}</h3>
-                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Entity: <span className="text-slate-400">{r.ngoName}</span></p>
-                  </div>
-                  <p className="text-sm text-[#94a3b8] font-medium leading-relaxed max-w-2xl">{r.description}</p>
-                  
-                  <div className="flex flex-wrap gap-6 pt-2">
-                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      <span className="text-lg">📍</span> {r.location?.address || "Mobile Base"}
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                      <span className="text-lg">🕒</span> Published {new Date(r.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    {(r.requiredSkills || []).map((s) => (
-                      <span key={s} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-cyan-400 uppercase tracking-widest group-hover:bg-cyan-500/10 transition-all">
-                        #{s}
-                      </span>
-                    ))}
-                  </div>
+          <div key={r.id} className="glass-card" style={{
+            borderColor: accepted.includes(r.id) ? "var(--green-500)" : "var(--border)",
+          }}>
+            <div className="flex-between" style={{ alignItems: "flex-start", marginBottom: "1rem" }}>
+              <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flex: 1, minWidth: 0 }}>
+                <div className="flex-center" style={{
+                  width: "3.5rem", height: "3.5rem", borderRadius: "1rem", fontSize: "1.75rem",
+                  background: priorityBg[r.priority] || "rgba(255,255,255,0.05)", 
+                  border: `1px solid ${priorityColors[r.priority] || "var(--border)"}44`, flexShrink: 0,
+                }}>🤝</div>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <h3 style={{ fontSize: "1.1rem", marginBottom: "0.25rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title}</h3>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "var(--teal-500)", marginBottom: "0.5rem" }}>{r.ngoName}</div>
+                  <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical", overflow: "hidden" }}>{r.description}</p>
                 </div>
               </div>
-              
-              <div className="flex flex-col items-end gap-3 shrink-0 w-full md:w-auto">
-                <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ring-1 ${priorityBgs[r.priority]}`}>
-                  <span className={priorityColors[r.priority]}>{r.priority.toUpperCase()}</span> PRIORITY
-                </span>
-                <span className="animate-pulse bg-orange-500/10 text-orange-500 text-[9px] font-black px-3 py-1 rounded-full border border-orange-500/20 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500" /> Live Feed
-                </span>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem", flexShrink: 0 }}>
+                <span style={{
+                  padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.7rem", fontWeight: 800,
+                  color: priorityColors[r.priority] || "var(--text-primary)", background: priorityBg[r.priority] || "var(--border)",
+                  border: `1px solid ${priorityColors[r.priority] || "var(--border)"}44`,
+                }}>{(r.priority || "NORMAL").toUpperCase()}</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--amber-500)", fontWeight: 700 }}>🔥 RECOMMENDATION</span>
               </div>
             </div>
 
-            <div className="mt-10 pt-8 border-t border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-6">
-              {accepted.includes(r.id) ? (
-                <div className="flex items-center gap-3 text-green-500 text-xs font-black uppercase tracking-widest bg-green-500/10 px-6 py-3 rounded-xl border border-green-500/20">
-                  <span className="text-lg font-bold">✓</span> Deployment Sequence Initialized. Check My Tasks.
-                </div>
-              ) : (
-                <button onClick={() => handleAccept(r)} className="px-10 py-4.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all w-full md:w-auto text-center">
-                  Initialize Deployment →
-                </button>
-              )}
-              <div className="flex items-center gap-4 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] whitespace-nowrap">
-                <span className="hover:text-cyan-400 cursor-help transition-colors">Safety Code 4A</span>
-                <span className="opacity-20">|</span>
-                <span className="hover:text-cyan-400 cursor-help transition-colors">Skill Match 98%</span>
-              </div>
+            {/* Meta info - Fluid Row */}
+            <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", margin: "1rem 0", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+              <span>📍 {r.location?.address || "Nearby"}</span>
+              <span>🕒 Posted: {new Date(r.createdAt).toLocaleDateString()}</span>
             </div>
+
+            {/* Skills - Responsive Chips */}
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+              {(r.requiredSkills || []).map((s) => (
+                <span key={s} style={{ padding: "0.25rem 0.75rem", borderRadius: "999px", fontSize: "0.75rem", background: "rgba(20,184,196,0.1)", color: "var(--teal-500)", border: "1px solid var(--border)" }}>
+                  #{s}
+                </span>
+              ))}
+            </div>
+
+            {/* Actions */}
+            {accepted.includes(r.id) ? (
+              <div className="flex-center" style={{ gap: "0.5rem", color: "var(--green-500)", fontWeight: 600, padding: "0.5rem", background: "rgba(34, 197, 94, 0.05)", borderRadius: "0.75rem" }}>
+                <span>✅</span> <span>Request accepted! Check your Task Board.</span>
+              </div>
+            ) : (
+              <button onClick={() => handleAccept(r)} style={{
+                width: "100%", padding: "0.75rem", borderRadius: "0.75rem", border: "none",
+                background: "linear-gradient(135deg, var(--green-500), #16a34a)", color: "#fff",
+                fontWeight: 700, cursor: "pointer", fontSize: "0.95rem", transition: "transform 0.2s"
+              }}>Accept Task</button>
+            )}
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function prioBgGradient(p: string) {
-  switch(p) {
-    case 'critical': return 'from-red-500 to-transparent';
-    case 'high': return 'from-orange-500 to-transparent';
-    case 'medium': return 'from-amber-500 to-transparent';
-    default: return 'from-green-500 to-transparent';
-  }
 }

@@ -8,8 +8,8 @@ export default function SplashPage() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setProgress((p) => (p >= 100 ? 100 : p + 2.5));
-    }, 50);
+      setProgress((p) => (p >= 100 ? 100 : p + 2));
+    }, 60);
     return () => clearInterval(interval);
   }, []);
 
@@ -20,64 +20,114 @@ export default function SplashPage() {
   }, [progress, router]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_50%_40%,_#0f6b71_0%,_#060d10_70%)] relative overflow-hidden">
-      {/* Decorative rings - Animated */}
-      <div className="absolute w-[300px] h-[300px] md:w-[600px] md:h-[600px] rounded-full border border-cyan-500/10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-ping duration-[3000ms]" />
-      <div className="absolute w-[200px] h-[200px] md:w-[400px] md:h-[400px] rounded-full border border-cyan-400/20 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute w-[150px] h-[150px] md:w-[300px] md:h-[300px] rounded-full border border-cyan-300/30 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "radial-gradient(ellipse at 50% 40%, var(--teal-900) 0%, var(--bg-dark) 80%)",
+        position: "relative",
+        overflow: "hidden",
+        padding: "var(--content-padding)",
+      }}
+    >
+      {/* Decorative rings - Fluid */}
+      <div style={{
+        position: "absolute",
+        width: "min(600px, 120vw)",
+        height: "min(600px, 120vw)",
+        borderRadius: "50%",
+        border: "1px solid rgba(20,184,196,0.05)",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+      }} />
+      <div style={{
+        position: "absolute",
+        width: "min(400px, 80vw)",
+        height: "min(400px, 80vw)",
+        borderRadius: "50%",
+        border: "1px solid rgba(20,184,196,0.08)",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        pointerEvents: "none",
+      }} />
 
-      {/* Main Content */}
-      <div className="relative z-10 text-center animate-in fade-in zoom-in-95 duration-1000">
-        {/* Logo Container */}
-        <div className="pulse-glow w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-cyan-400 to-amber-500 flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-cyan-500/20 ring-4 ring-white/10 overflow-hidden transform hover:scale-110 transition-transform">
-          <img src="/logo.png" alt="ResQAI" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-lg" />
+      {/* Logo area */}
+      <div className="fade-up" style={{ textAlign: "center", zIndex: 1, width: "100%", maxWidth: "400px" }}>
+        {/* Logo Icon - Fluid */}
+        <div className="pulse-glow" style={{
+          width: "clamp(80px, 15vw, 120px)",
+          height: "clamp(80px, 15vw, 120px)",
+          borderRadius: "50%",
+          background: "linear-gradient(135deg, var(--teal-500), var(--amber-500))",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          margin: "0 auto 2rem",
+          boxShadow: "0 0 40px rgba(20,184,196,0.3)",
+        }}>
+          <img src="/logo.png" alt="ResQAI" style={{ width: "60%", height: "60%", objectFit: "contain" }} />
         </div>
 
-        <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-[#f0f9fa] mb-4">
-          ResQ<span className="text-cyan-400">AI</span>
+        <h1 style={{
+          fontSize: "clamp(2.5rem, 8vw, 4rem)",
+          fontWeight: 900,
+          letterSpacing: "-0.04em",
+          marginBottom: "0.5rem",
+          lineHeight: 1,
+        }}>
+          <span className="gradient-text" style={{ background: "linear-gradient(135deg, var(--teal-400), var(--amber-400))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>ResQAI</span>
         </h1>
-        
-        <p className="text-xs md:text-lg text-[#94a3b8] font-bold uppercase tracking-[0.3em] mb-2 px-6">
-          Intelligence for Social Good
+        <p style={{ color: "var(--text-primary)", fontSize: "clamp(1rem, 3vw, 1.25rem)", marginBottom: "0.5rem", fontWeight: 500 }}>
+          Smart Response & NGO Coordination
         </p>
-        
-        <div className="h-px w-12 bg-white/10 mx-auto my-6" />
-
-        <p className="text-sm text-slate-500 font-medium mb-16 italic opacity-80">
-          Syncing with humanitarian nodes...
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "3rem", maxWidth: "80%", marginInline: "auto" }}>
+          Empowering real-time disaster response through intelligent matching.
         </p>
 
-        {/* Dynamic Progress Bar */}
-        <div className="w-48 md:w-72 h-1.5 bg-white/5 rounded-full overflow-hidden mx-auto shadow-inner">
-          <div 
-            className="h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-amber-500 transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(20,184,196,0.5)]"
-            style={{ width: `${progress}%` }}
-          />
+        {/* Progress bar - Fluid */}
+        <div style={{
+          width: "min(280px, 100%)",
+          height: "6px",
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: "99px",
+          overflow: "hidden",
+          margin: "0 auto",
+          border: "1px solid rgba(255,255,255,0.03)",
+        }}>
+          <div style={{
+            height: "100%",
+            width: `${progress}%`,
+            background: "linear-gradient(90deg, var(--teal-500), var(--amber-500))",
+            borderRadius: "99px",
+            transition: "width 0.08s linear",
+            boxShadow: "0 0 10px var(--teal-500)",
+          }} />
         </div>
-        
-        <div className="mt-6 flex items-center justify-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="text-[10px] font-black text-cyan-400/60 uppercase tracking-widest leading-none">
-            {progress < 100 ? `Synchronizing: ${Math.round(progress)}%` : 'Uplink Established'}
-          </span>
-        </div>
+        <p style={{ color: "var(--text-secondary)", fontSize: "0.75rem", marginTop: "1rem", letterSpacing: "0.05em", opacity: 0.8 }}>
+          INITIALIZING SECURE SESSION
+        </p>
       </div>
 
-      {/* Bottom Legal/Version - Mobile Optimized */}
-      <div className="absolute bottom-10 left-0 right-0 px-6 text-center">
-        <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.4em] mb-2">
-          ResQAI Deployment Protocol 2026
-        </p>
-        <div className="flex justify-center gap-4 text-[9px] font-bold text-slate-700 uppercase tracking-widest">
-          <span>v4.2.0-STABLE</span>
-          <span className="opacity-30">|</span>
-          <span>GLOBAL DIST</span>
-        </div>
+      {/* Bottom tagline - Responsive */}
+      <div style={{
+        position: "absolute",
+        bottom: "min(5vh, 2rem)",
+        color: "var(--text-secondary)",
+        fontSize: "0.75rem",
+        opacity: 0.5,
+        fontWeight: 600,
+        letterSpacing: "0.1em",
+        textAlign: "center",
+        width: "100%",
+      }}>
+        TOGETHER WE RESTORE • 🌍 • TOGETHER WE REBUILD
       </div>
-
-      {/* Floating Particles/Glow - Desktop Only */}
-      <div className="hidden md:block absolute top-[20%] left-[20%] w-2 h-2 bg-cyan-400 rounded-full blur-sm opacity-20 animate-bounce" />
-      <div className="hidden md:block absolute top-[70%] right-[30%] w-3 h-3 bg-amber-500 rounded-full blur-sm opacity-10 animate-pulse" />
     </div>
   );
 }

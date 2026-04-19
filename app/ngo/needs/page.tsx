@@ -6,9 +6,8 @@ import { Need } from "@/types";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-const priorityColors: Record<string, string> = { critical: "text-red-500", high: "text-orange-500", medium: "text-amber-500", low: "text-green-500" };
-const priorityBgs: Record<string, string> = { critical: "bg-red-500/10 ring-red-500/20", high: "bg-orange-500/10 ring-orange-500/20", medium: "bg-amber-500/10 ring-amber-500/20", low: "bg-green-500/10 ring-green-500/20" };
-const statusColors: Record<string, string> = { open: "bg-indigo-500/10 text-indigo-400 ring-indigo-500/20", assigned: "bg-amber-500/10 text-amber-500 ring-amber-500/20", completed: "bg-green-500/10 text-green-500 ring-green-500/20" };
+const priorityColors: Record<string, string> = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
+const statusColors: Record<string, string> = { open: "#6366f1", assigned: "#f59e0b", completed: "#22c55e" };
 
 const VOLUNTEER_TYPES = ["medical", "engineering", "rescue", "logistics", "food", "education", "it", "construction"];
 
@@ -31,7 +30,7 @@ export default function NeedsPage() {
   const openEdit = (n: Need) => { setForm({ title: n.title, description: n.description, locationText: n.location.address, lat: n.location.lat, lng: n.location.lng, priority: n.priority, skills: n.requiredSkills }); setEditId(n.id); setShowForm(true); };
   
   const deleteNeed = async (id: string) => {
-    if (confirm("Decommission this requirement permanently? This action is logged.")) {
+    if (confirm("Are you sure you want to delete this need?")) {
       await deleteDoc(doc(db, "needs", id));
     }
   };
@@ -56,7 +55,7 @@ export default function NeedsPage() {
           priority: form.priority,
           requiredSkills: form.skills,
           ngoId: profile.uid,
-          ngoName: `${profile.firstName} ${profile.lastName}`,
+          ngoName: profile.firstName + ' ' + profile.lastName,
           ngoContact: profile.email,
           status: "open",
         });
@@ -64,154 +63,114 @@ export default function NeedsPage() {
       setShowForm(false);
     } catch (e) {
       console.error(e);
+      alert("Error saving need.");
     }
   };
 
   const myNeeds = needs.filter(n => n.ngoId === profile?.uid);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <h1 className="text-3xl font-black text-[#f0f9fa] tracking-tight">Need <span className="text-amber-500">Inventory</span></h1>
-          <p className="text-sm text-[#94a3b8] font-medium mt-1 uppercase tracking-widest text-[10px]">Manage and broadcast help requirements</p>
+          <h1 style={{ fontSize: 24, fontWeight: 800 }}>Need Management</h1>
+          <p style={{ color: "#94a3b8", fontSize: 14 }}>Create and manage help requests for your NGO</p>
         </div>
-        <button onClick={openCreate} className="px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-95 transition-all">
-          + New Requirement
+        <button onClick={openCreate} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          + Create Need
         </button>
       </div>
 
       {/* Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-card w-full max-w-xl p-8 animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <div className="flex justify-between items-start mb-8">
-              <div>
-                <h2 className="text-xl font-black text-white tracking-tight uppercase">{editId ? "✏️ Calibrate Need" : "🆕 Initialize Need"}</h2>
-                <p className="text-xs text-[#94a3b8] font-bold mt-1 uppercase tracking-widest">Protocol Entry v2.4</p>
-              </div>
-              <button onClick={() => setShowForm(false)} className="text-slate-500 hover:text-white transition-colors text-2xl">×</button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="glass-card" style={{ width: 540, padding: 32, maxHeight: "90vh", overflowY: "auto" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>{editId ? "✏️ Edit Need" : "🆕 Create New Need"}</h2>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Title</label>
+              <input value={form.title} onChange={(e) => update("title", e.target.value)} placeholder={"e.g. Emergency Medical Aid"}
+                style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Location Address</label>
+              <input value={form.locationText} onChange={(e) => update("locationText", e.target.value)} placeholder={"e.g. Sector 7, Chennai"}
+                style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Requirement Designation</label>
-                <input value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="MISSION TITLE"
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white placeholder-slate-600 focus:border-amber-500/50 outline-none transition-all" />
+            <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Latitude (optional)</label>
+                <input type="number" value={form.lat} onChange={(e) => update("lat", parseFloat(e.target.value))}
+                  style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
               </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Longitude (optional)</label>
+                <input type="number" value={form.lng} onChange={(e) => update("lng", parseFloat(e.target.value))}
+                  style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14 }} />
+              </div>
+            </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Deployment Sector (Address)</label>
-                <input value={form.locationText} onChange={(e) => update("locationText", e.target.value)} placeholder="COORDINATES"
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white placeholder-slate-600 focus:border-amber-500/50 outline-none transition-all" />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Description</label>
+              <textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={3}
+                style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 14, resize: "none" }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 6 }}>Priority</label>
+              <select value={form.priority} onChange={(e) => update("priority", e.target.value)}
+                style={{ width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: priorityColors[form.priority], fontSize: 14 }}>
+                {["critical", "high", "medium", "low"].map((p) => <option key={p} value={p}>{p.toUpperCase()}</option>)}
+              </select>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>Required Skills</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {VOLUNTEER_TYPES.map((s) => (
+                  <button key={s} type="button" onClick={() => update("skills", form.skills.includes(s) ? form.skills.filter((x) => x !== s) : [...form.skills, s])}
+                    style={{ padding: "6px 12px", borderRadius: 999, border: "1px solid", fontSize: 12, cursor: "pointer",
+                      borderColor: form.skills.includes(s) ? "#14b8c4" : "rgba(255,255,255,0.12)",
+                      background: form.skills.includes(s) ? "rgba(20,184,196,0.12)" : "transparent",
+                      color: form.skills.includes(s) ? "#14b8c4" : "#64748b" }}>{s}</button>
+                ))}
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Latitude</label>
-                  <input type="number" value={form.lat} onChange={(e) => update("lat", parseFloat(e.target.value))}
-                    className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white outline-none focus:border-amber-500/50 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Longitude</label>
-                  <input type="number" value={form.lng} onChange={(e) => update("lng", parseFloat(e.target.value))}
-                    className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white outline-none focus:border-amber-500/50 transition-all" />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tactical Intelligence (Description)</label>
-                <textarea value={form.description} onChange={(e) => update("description", e.target.value)} rows={3}
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white placeholder-slate-600 focus:border-amber-500/50 outline-none transition-all resize-none" />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Risk/Priority Assessment</label>
-                <select value={form.priority} onChange={(e) => update("priority", e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 rounded-xl px-5 py-3.5 text-sm text-white outline-none focus:border-amber-500/50 transition-all appearance-none cursor-pointer">
-                  {["critical", "high", "medium", "low"].map((p) => <option key={p} value={p} className="bg-slate-900">{p.toUpperCase()}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Required Technical Directives (Skills)</label>
-                <div className="flex flex-wrap gap-2">
-                  {VOLUNTEER_TYPES.map((s) => (
-                    <button 
-                      key={s} 
-                      type="button" 
-                      onClick={() => update("skills", form.skills.includes(s) ? form.skills.filter((x) => x !== s) : [...form.skills, s])}
-                      className={`
-                        px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border
-                        ${form.skills.includes(s) 
-                          ? 'bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/20' 
-                          : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}
-                      `}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <button onClick={() => setShowForm(false)} className="flex-1 py-4 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:text-white transition-all">Cancel</button>
-                <button onClick={saveNeed} className="flex-1 py-4 bg-gradient-to-r from-amber-500 to-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 active:scale-95 transition-all">
-                  {editId ? "Update Baseline" : "Deploy Protocol"} →
-                </button>
-              </div>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowForm(false)} style={{ flex: 1, padding: 11, borderRadius: 10, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "#94a3b8", cursor: "pointer" }}>Cancel</button>
+              <button onClick={saveNeed} style={{ flex: 1, padding: 11, borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+                {editId ? "Save Changes" : "Create Need"} →
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Need cards */}
-      <div className="grid grid-cols-1 gap-4">
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {myNeeds.length === 0 ? (
-          <div className="glass-card p-12 text-center text-[#94a3b8] font-bold uppercase tracking-widest text-xs italic opacity-60">
-            No requirements detected in current NGO sector.
-          </div>
+          <div style={{ color: "#94a3b8", padding: 24, textAlign: "center" }}>No needs created yet. Create one to get started!</div>
         ) : myNeeds.map((n) => (
-          <div key={n.id} className="glass-card p-6 md:p-8 group hover:border-amber-500/30 transition-all">
-            <div className="flex flex-col lg:flex-row justify-between items-start gap-8">
-              <div className="flex-1 space-y-4 w-full">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-lg font-black text-white tracking-tight uppercase group-hover:text-amber-500 transition-colors">{n.title}</h3>
-                  <div className="flex gap-2">
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ring-1 ${priorityBgs[n.priority]}`}>
-                      <span className={priorityColors[n.priority]}>{n.priority}</span>
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ring-1 ${statusColors[n.status]}`}>
-                      {n.status}
-                    </span>
-                  </div>
+          <div key={n.id} className="glass-card" style={{ padding: 22 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 16 }}>{n.title}</h3>
+                  <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: priorityColors[n.priority] || "#fff", background: `${priorityColors[n.priority] || "#fff"}18` }}>{n.priority.toUpperCase()}</span>
+                  <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: statusColors[n.status], background: `${statusColors[n.status]}18` }}>{n.status.toUpperCase()}</span>
                 </div>
-                
-                <p className="text-sm text-[#94a3b8] font-medium leading-relaxed max-w-3xl line-clamp-2 md:line-clamp-none">
-                  {n.description}
-                </p>
-
-                <div className="flex flex-wrap gap-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  <span className="flex items-center gap-2"><span className="text-lg">📍</span> {n.location.address}</span>
-                  <span className="flex items-center gap-2"><span className="text-lg">🕒</span> Published {new Date(n.createdAt).toLocaleDateString()}</span>
+                <p style={{ fontSize: 14, color: "#94a3b8", marginBottom: 10 }}>{n.description}</p>
+                <div style={{ display: "flex", gap: 16, fontSize: 13, color: "#64748b" }}>
+                  <span>📍 {n.location.address}</span>
+                  <span>🕒 {new Date(n.createdAt).toLocaleDateString()}</span>
                 </div>
-
-                <div className="flex flex-wrap gap-2 pt-2">
+                <div style={{ display: "flex", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
                   {(n.requiredSkills || []).map((s) => (
-                    <span key={s} className="px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[9px] font-black text-amber-500 uppercase tracking-widest group-hover:bg-amber-500/10 transition-all">
-                      #{s}
-                    </span>
+                    <span key={s} style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, background: "rgba(20,184,196,0.1)", color: "#14b8c4", border: "1px solid rgba(20,184,196,0.2)" }}>#{s}</span>
                   ))}
                 </div>
               </div>
-
-              <div className="flex lg:flex-col gap-3 shrink-0 w-full lg:w-auto">
-                <button onClick={() => openEdit(n)} className="flex-1 lg:w-32 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#f59e0b] hover:bg-amber-500/10 transition-all">
-                  ✏️ Calibrate
-                </button>
-                <button onClick={() => deleteNeed(n.id)} className="flex-1 lg:w-32 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-500 hover:bg-red-500/10 transition-all">
-                  🗑️ Purge
-                </button>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0, marginLeft: 16 }}>
+                <button onClick={() => openEdit(n)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(245,158,11,0.3)", background: "transparent", color: "#f59e0b", cursor: "pointer", fontSize: 13 }}>✏️ Edit</button>
+                <button onClick={() => deleteNeed(n.id)} style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.3)", background: "transparent", color: "#f87171", cursor: "pointer", fontSize: 13 }}>🗑️ Delete</button>
               </div>
             </div>
           </div>

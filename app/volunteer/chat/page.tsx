@@ -7,17 +7,9 @@ import { subscribeToFriends, FriendRequest } from "@/lib/social";
 import { UserProfile } from "@/lib/auth";
 import { Message } from "@/types";
 
-const botReplies = [
-  "I'm available to help! Can you tell me more about the task?",
-  "Based on your location, there are 3 high-priority requests near you.",
-  "Your current score is 1,240 pts. You need 760 more to reach Expert level!",
-  "The nearest task is 1.2km away – a medical emergency in Sector 7.",
-  "You have unread notifications. Check the bell icon in the top bar.",
-];
-
 export default function ChatPage() {
   const { profile } = useAuth();
-  const [activeChat, setActiveChat] = useState<"bot" | "community" | string>("bot"); // string = userId for 1:1
+  const [activeChat, setActiveChat] = useState<"bot" | "community" | string>("bot");
   const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [search, setSearch] = useState("");
@@ -26,7 +18,6 @@ export default function ChatPage() {
     { id: 1, from: "bot", text: "👋 Hi! I'm your ResQAI assistant. How can I help you today?", time: "Now" },
   ]);
 
-  // Load bot chat from local storage on mount
   useEffect(() => {
     const saved = localStorage.getItem("resqaiBotChat");
     if (saved) {
@@ -35,7 +26,6 @@ export default function ChatPage() {
     }
   }, []);
 
-  // Save bot chat to local storage whenever it changes
   useEffect(() => {
     if (botMessages.length > 1) {
       localStorage.setItem("resqaiBotChat", JSON.stringify(botMessages));
@@ -50,7 +40,7 @@ export default function ChatPage() {
 
   useEffect(() => {
     const unsubMessages = subscribeToMessages(setMessages);
-    const unsubUsers = subscribeToUsers("volunteer", setUsers); // also search volunteers
+    const unsubUsers = subscribeToUsers("volunteer", setUsers);
     
     let unsubFriends = () => {};
     if (profile?.uid) {
@@ -62,7 +52,6 @@ export default function ChatPage() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, botMessages, activeChat, botLoading]);
 
-  // Derive friend IDs
   const friendIds = friends.map(f => f.fromId === profile?.uid ? f.toId : f.fromId);
   
   const activeUser = users.find(u => u.uid === activeChat);
@@ -108,8 +97,6 @@ export default function ChatPage() {
         setBotLoading(false);
       }
     } else {
-      // In a real advanced app, we'd add channelId. For now everything broadcasts globally 
-      // but client filters. Here we just use the global stream for MVP.
       await sendMessage({
         senderId: profile.uid,
         senderName: profile.firstName + ' ' + profile.lastName,
@@ -120,46 +107,50 @@ export default function ChatPage() {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800 }}>Chat</h1>
-        <p style={{ color: "#94a3b8", fontSize: 14 }}>Real-time messaging with NGOs, volunteers, and AI</p>
-      </div>
+    <div className="fade-up" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - var(--header-height) - 2 * var(--content-padding))", gap: "1.5rem" }}>
+      <header>
+        <h1>Chat</h1>
+        <p>Real-time messaging with NGOs, volunteers, and AI assistant</p>
+      </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "calc(100vh - 200px)" }}>
-        {/* Contact list */}
-        <div className="glass-card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ 
+        flex: 1, 
+        display: "grid", 
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))", 
+        gap: "1rem", 
+        minHeight: 0 
+      }}>
+        <div className="glass-card" style={{ display: "flex", flexDirection: "column", padding: 0, maxHeight: "100%", overflow: "hidden" }}>
           
-          {/* Search bar */}
-          <div style={{ padding: "12px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+          <div style={{ padding: "0.75rem", borderBottom: "1px solid var(--border)" }}>
             <input 
                value={search} 
                onChange={e => setSearch(e.target.value)} 
-               placeholder="Search by username..." 
-               style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(20,184,196,0.3)", background: "rgba(255,255,255,0.05)", color: "#fff", fontSize: 13, outline: "none" }}
+               placeholder="Search friends..." 
+               style={{ width: "100%", padding: "0.5rem", borderRadius: "0.5rem", fontSize: "0.85rem", background: "rgba(0,0,0,0.2)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
             />
           </div>
 
-          <div style={{ flex: 1, overflowY: "auto" }}>
+          <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
             {searchedUsers.map(u => (
                <button key={u.uid} onClick={() => { setActiveChat(u.uid); setSearch(""); }} style={{
-                padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
-                background: activeChat === u.uid ? "rgba(20,184,196,0.12)" : "transparent",
-                borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s",
+                padding: "1rem", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
+                background: activeChat === u.uid ? "rgba(20,184,196,0.1)" : "transparent",
+                borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s",
               }}>
-                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                  <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(20,184,196,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, overflow: "hidden" }}>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                  <div style={{ width: "2.5rem", height: "2.5rem", borderRadius: "50%", background: "rgba(20,184,196,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", overflow: "hidden", flexShrink: 0 }}>
                      {u.avatarUrl ? (
                        u.avatarUrl.startsWith("http") || u.avatarUrl.startsWith("data:") ? (
-                         <img src={u.avatarUrl} alt="" style={{width:'100%',height:'100%',borderRadius:'50%'}}/>
+                         <img src={u.avatarUrl} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                        ) : (
                          <span>{u.avatarUrl}</span>
                        )
                      ) : "👤"}
                   </div>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa" }}>{u.firstName}</div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>@{u.username}</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.firstName}</div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-secondary)" }}>@{u.username}</div>
                   </div>
                 </div>
               </button>
@@ -168,33 +159,32 @@ export default function ChatPage() {
             {!search && (
               <>
                 <button onClick={() => setActiveChat("bot")} style={{
-                  padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
-                  background: activeChat === "bot" ? "rgba(99,102,241,0.12)" : "transparent",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s",
+                  padding: "1rem", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
+                  background: activeChat === "bot" ? "rgba(99,102,241,0.1)" : "transparent",
+                  borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s",
                 }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <div style={{ width: 42, height: 42, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🤖</div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: "#f0f9fa" }}>AI Assistant</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>Ask me anything…</div>
+                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                    <div className="flex-center" style={{ width: "2.5rem", height: "2.5rem", borderRadius: "50%", background: "linear-gradient(135deg, var(--indigo-500), #8b5cf6)", fontSize: "1.25rem", flexShrink: 0 }}>🤖</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--text-primary)" }}>AI Assistant</div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Ask me for emergency help...</div>
                     </div>
-                    <div style={{ marginLeft: "auto", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} />
                   </div>
                 </button>
 
                 <button onClick={() => setActiveChat("community")} style={{
-                  padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
-                  background: activeChat === "community" ? "rgba(20,184,196,0.12)" : "transparent",
-                  borderBottom: "1px solid rgba(255,255,255,0.05)", transition: "background 0.2s",
+                  padding: "1rem", border: "none", textAlign: "left", cursor: "pointer", width: "100%",
+                  background: activeChat === "community" ? "rgba(20,184,196,0.1)" : "transparent",
+                  borderBottom: "1px solid rgba(255,255,255,0.03)", transition: "background 0.2s",
                 }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <div style={{ position: "relative" }}>
-                      <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(20,184,196,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🌍</div>
-                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: "#22c55e", border: "2px solid #0d1f24" }} />
+                  <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                    <div style={{ position: "relative", flexShrink: 0 }}>
+                      <div className="flex-center" style={{ width: "2.5rem", height: "2.5rem", borderRadius: "50%", background: "rgba(20,184,196,0.15)", fontSize: "1.25rem" }}>🌍</div>
+                      <div style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: "var(--green-500)", border: "2px solid var(--bg-card)" }} />
                     </div>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa" }}>Global Channel</div>
-                      <div style={{ fontSize: 11, color: "#64748b" }}>Chat with everyone</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "var(--text-primary)" }}>Global Channel</div>
+                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>Chat with everyone</div>
                     </div>
                   </div>
                 </button>
@@ -203,53 +193,46 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Chat window */}
-        <div className="glass-card" style={{ display: "flex", flexDirection: "column" }}>
-          {/* Chat header */}
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(20,184,196,0.1)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: activeChat === "bot" ? "linear-gradient(135deg,#6366f1,#8b5cf6)" : "rgba(20,184,196,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, overflow: "hidden" }}>
+        <div className="glass-card" style={{ display: "flex", flexDirection: "column", padding: 0, maxHeight: "100%", overflow: "hidden" }}>
+          <div style={{ padding: "0.75rem 1.25rem", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              <div style={{ width: "2.25rem", height: "2.25rem", borderRadius: "50%", background: activeChat === "bot" ? "var(--indigo-500)" : "rgba(20,184,196,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", overflow: "hidden", flexShrink: 0 }}>
                 {activeChat === "bot" ? "🤖" : activeUser ? (
                   activeUser.avatarUrl ? (
-                    activeUser.avatarUrl.startsWith("http") || activeUser.avatarUrl.startsWith("data:") ? (
-                      <img src={activeUser.avatarUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} />
-                    ) : (
-                      <span>{activeUser.avatarUrl}</span>
-                    )
+                    <img src={activeUser.avatarUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} />
                   ) : "👤"
                 ) : "🌍"}
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: "#f0f9fa" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {activeChat === "bot" ? "AI Assistant" : activeUser ? activeUser.firstName + " " + activeUser.lastName : "Global Community Channel"}
                 </div>
-                <div style={{ fontSize: 12, color: "#22c55e" }}>● Online</div>
+                <div style={{ fontSize: "0.7rem", color: "var(--green-500)" }}>● Online</div>
               </div>
             </div>
           </div>
 
-          {/* Messages */}
-          <div style={{ flex: 1, overflowY: "auto", padding: 20, display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
             {activeChat === "bot" && (
               botMessages.map((msg) => (
                 <div key={msg.id} style={{ display: "flex", justifyContent: msg.from === "me" ? "flex-end" : "flex-start" }}>
                   <div style={{
-                    maxWidth: "70%", padding: "10px 16px", borderRadius: 14,
-                    borderBottomLeftRadius: msg.from !== "me" ? 4 : 14,
-                    borderBottomRightRadius: msg.from === "me" ? 4 : 14,
-                    background: msg.from === "me" ? "linear-gradient(135deg,#14b8c4,#0f6b71)" : "rgba(99,102,241,0.2)",
-                    color: "#f0f9fa",
+                    maxWidth: "min(350px, 85%)", padding: "0.75rem 1rem", borderRadius: "1rem",
+                    borderBottomLeftRadius: msg.from !== "me" ? 4 : "1rem",
+                    borderBottomRightRadius: msg.from === "me" ? 4 : "1rem",
+                    background: msg.from === "me" ? "linear-gradient(135deg, var(--teal-500), var(--teal-700))" : "rgba(99,102,241,0.15)",
+                    border: "1px solid rgba(255,255,255,0.05)",
                   }}>
-                    <pre style={{ fontSize: 14, lineHeight: 1.5, fontFamily: "inherit", whiteSpace: "pre-wrap" }}>{msg.text}</pre>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 4, textAlign: "right" }}>{msg.time}</p>
+                    <pre style={{ fontSize: "0.9rem", lineHeight: 1.5, fontFamily: "inherit", whiteSpace: "pre-wrap", color: "var(--text-primary)" }}>{msg.text}</pre>
+                    <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", marginTop: "0.25rem", textAlign: "right" }}>{msg.time}</p>
                   </div>
                 </div>
               ))
             )}
             {activeChat === "bot" && botLoading && (
                 <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                  <div style={{ padding: "10px 16px", borderRadius: 14, borderBottomLeftRadius: 4, background: "rgba(99,102,241,0.2)", color: "#f0f9fa" }}>
-                    <p style={{ fontSize: 14, fontStyle: "italic", animation: "pulse 1.5s infinite" }}>Thinking...</p>
+                  <div style={{ padding: "0.75rem 1rem", borderRadius: "1rem", borderBottomLeftRadius: 4, background: "rgba(99,102,241,0.15)", color: "var(--text-secondary)" }}>
+                    <p style={{ fontSize: "0.85rem", fontStyle: "italic" }}>AI is typing...</p>
                   </div>
                 </div>
             )}
@@ -265,15 +248,15 @@ export default function ChatPage() {
                 return (
                   <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start" }}>
                     <div style={{
-                      maxWidth: "70%", padding: "10px 16px", borderRadius: 14,
-                      borderBottomLeftRadius: !isMe ? 4 : 14,
-                      borderBottomRightRadius: isMe ? 4 : 14,
-                      background: isMe ? "linear-gradient(135deg,#14b8c4,#0f6b71)" : "rgba(255,255,255,0.07)",
-                      color: "#f0f9fa",
+                      maxWidth: "min(350px, 85%)", padding: "0.75rem 1rem", borderRadius: "1rem",
+                      borderBottomLeftRadius: !isMe ? 4 : "1rem",
+                      borderBottomRightRadius: isMe ? 4 : "1rem",
+                      background: isMe ? "linear-gradient(135deg, var(--teal-500), var(--teal-700))" : "rgba(255,255,255,0.07)",
+                      border: "1px solid rgba(255,255,255,0.05)",
                     }}>
-                      {!isMe && <div style={{ fontSize: 11, color: "#14b8c4", fontWeight: 700, marginBottom: 4 }}>{msg.senderName}</div>}
-                      <p style={{ fontSize: 14, lineHeight: 1.5 }}>{displayContent}</p>
-                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 4, textAlign: "right" }}>
+                      {!isMe && <div style={{ fontSize: "0.7rem", color: "var(--teal-300)", fontWeight: 700, marginBottom: 2 }}>{msg.senderName}</div>}
+                      <p style={{ fontSize: "0.9rem", lineHeight: 1.5, color: "var(--text-primary)" }}>{displayContent}</p>
+                      <p style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.4)", marginTop: "0.25rem", textAlign: "right" }}>
                         {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
@@ -284,58 +267,41 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Emergency Quick Actions */}
           {activeChat === "bot" && (
-            <div style={{ padding: "8px 20px 0", display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11, color: "#64748b", alignSelf: "center", marginRight: 4 }}>Quick:</span>
+            <div style={{ padding: "0.5rem 1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap", overflowX: "auto" }}>
               {[
-                { label: "🚗 Accident", prompt: "Give step-by-step emergency instructions for a road accident situation. Include first aid, calling for help, and safety measures." },
-                { label: "🔥 Fire", prompt: "Give step-by-step emergency instructions for a fire situation. Include evacuation, fire extinguisher use, and what NOT to do." },
-                { label: "🌊 Flood", prompt: "Give step-by-step emergency instructions for a flood situation. Include evacuation priorities, what to take, and how to stay safe." },
-                { label: "❤️ CPR", prompt: "Give clear step-by-step CPR instructions for an unresponsive adult. Format as numbered steps." },
+                { label: "🚗 Accident", prompt: "Give step-by-step emergency instructions for a road accident situation." },
+                { label: "🔥 Fire", prompt: "Give step-by-step emergency instructions for a fire situation." },
+                { label: "🌊 Flood", prompt: "Emergency instructions for floods." },
+                { label: "❤️ CPR", prompt: "Step-by-step CPR instructions." },
               ].map(({ label, prompt }) => (
                 <button
                   key={label}
                   disabled={botLoading}
-                  onClick={async () => {
-                    if (!profile || botLoading) return;
-                    const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                    setBotMessages(prev => [...prev, { id: Date.now(), from: "me" as const, text: label, time: nowStr }]);
-                    setBotLoading(true);
-                    try {
-                      const res = await fetch("/api/gemini", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ systemPrompt: `You are the ResQAI Emergency Assistant helping volunteer ${profile.firstName}. Be concise, clear, and practical.`, message: prompt }),
-                      });
-                      const data = await res.json();
-                      setBotMessages(prev => [...prev, { id: Date.now() + 1, from: "bot" as const, text: data.success ? data.text : `⚠️ ${data.error}`, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-                    } catch { 
-                      setBotMessages(prev => [...prev, { id: Date.now() + 1, from: "bot" as const, text: "⚠️ Failed to connect to AI.", time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-                    } finally { setBotLoading(false); }
+                  onClick={() => { setInput(prompt); sendMsg(); }}
+                  style={{ 
+                    padding: "0.35rem 0.75rem", borderRadius: "1rem", border: "1px solid var(--border)", 
+                    background: "rgba(20,184,196,0.05)", color: "var(--teal-300)", fontSize: "0.75rem", 
+                    fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap"
                   }}
-                  style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid rgba(20,184,196,0.3)", background: "rgba(20,184,196,0.08)", color: "#14b8c4", fontSize: 12, fontWeight: 600, cursor: botLoading ? "not-allowed" : "pointer", opacity: botLoading ? 0.5 : 1, transition: "all 0.2s" }}
                 >{label}</button>
               ))}
             </div>
           )}
 
-          {/* Input */}
-          <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(20,184,196,0.1)", display: "flex", gap: 10 }}>
+          <div style={{ padding: "1rem 1.25rem", borderTop: "1px solid var(--border)", display: "flex", gap: "0.75rem" }}>
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMsg()}
-              placeholder={activeChat === "bot" ? "Ask for emergency help or guidance…" : "Type a message…"}
-              style={{
-                flex: 1, padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(20,184,196,0.2)",
-                background: "rgba(255,255,255,0.05)", color: "#f0f9fa", fontSize: 14, outline: "none",
-              }}
+              placeholder={activeChat === "bot" ? "Ask for emergency help…" : "Type a message…"}
+              style={{ flex: 1, fontSize: "0.9rem", padding: "0.75rem", borderRadius: "0.75rem", background: "rgba(0,0,0,0.1)", border: "1px solid var(--border)", color: "var(--text-primary)" }}
             />
             <button onClick={sendMsg} disabled={botLoading && activeChat === "bot"} style={{
-              padding: "11px 20px", borderRadius: 10, border: "none",
-              background: "linear-gradient(135deg,#14b8c4,#0f6b71)",
-              color: "#fff", fontWeight: 700, cursor: "pointer", fontSize: 16, opacity: botLoading && activeChat === "bot" ? 0.6 : 1
+              width: "3rem", height: "auto", borderRadius: "0.75rem", border: "none",
+              background: "linear-gradient(135deg, var(--teal-500), var(--teal-700))",
+              color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem",
+              flexShrink: 0, cursor: "pointer", opacity: botLoading && activeChat === "bot" ? 0.6 : 1
             }}>→</button>
           </div>
         </div>

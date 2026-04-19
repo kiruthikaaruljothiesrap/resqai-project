@@ -6,8 +6,6 @@ import { useAuth } from "@/context/AuthContext";
 import { GoogleMap, useLoadScript, Marker, InfoWindow } from "@react-google-maps/api";
 
 const priorityColors: Record<string, string> = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
-const priorityBorderColors: Record<string, string> = { critical: "border-red-500", high: "border-orange-500", medium: "border-amber-500", low: "border-green-500" };
-const priorityBgColors: Record<string, string> = { critical: "bg-red-500/10", high: "bg-orange-500/10", medium: "bg-amber-500/10", low: "bg-green-500/10" };
 
 const mapContainerStyle = { width: "100%", height: "100%" };
 const defaultCenter = { lat: 13.0827, lng: 80.2707 };
@@ -63,9 +61,10 @@ export default function MapPage() {
         points: 50,
         estimatedHours: 2,
       });
+      // Calculate ETA using current location
       if (userCoords && need.location?.lat && need.location?.lng) {
         const km = haversineKm(userCoords.lat, userCoords.lng, need.location.lat, need.location.lng);
-        const minutes = Math.round((km / 30) * 60);
+        const minutes = Math.round((km / 30) * 60); // assume 30 km/h average speed
         setAcceptedEta({ km: km.toFixed(1), minutes: minutes.toString() });
       }
       setSelected(null);
@@ -87,29 +86,30 @@ export default function MapPage() {
   }), []);
 
   return (
-    <div className="space-y-6 lg:space-y-8 pb-32">
-      <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-black text-[#f0f9fa] tracking-tight">Live Map View</h1>
-        <p className="text-sm md:text-base text-[#94a3b8] font-medium tracking-wide">Real-time rescue requests in your vicinity</p>
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800 }}>Live Map View</h1>
+        <p style={{ color: "#94a3b8", fontSize: 14 }}>Real-time open help requests plotted in your area</p>
       </div>
 
       {/* ETA Banner */}
       {acceptedEta && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 md:p-6 flex flex-col sm:flex-row gap-4 sm:gap-6 items-center shadow-xl shadow-green-500/5">
-          <span className="text-4xl">🚗</span>
-          <div className="text-center sm:text-left">
-            <div className="font-black text-green-500 text-base md:text-lg tracking-tight uppercase">Task Accepted! En Route</div>
-            <div className="text-xs md:text-sm text-[#94a3b8] font-bold mt-1">
-              Dist: <strong className="text-[#f0f9fa]">{acceptedEta.km} km</strong> · Arr. <strong className="text-amber-500">{acceptedEta.minutes} min</strong>
+        <div style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "14px 20px", marginBottom: 16, display: "flex", gap: 24, alignItems: "center" }}>
+          <span style={{ fontSize: 28 }}>🚗</span>
+          <div>
+            <div style={{ fontWeight: 700, color: "#22c55e", fontSize: 15 }}>Task Accepted! En Route</div>
+            <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 2 }}>
+              Distance: <strong style={{ color: "#f0f9fa" }}>{acceptedEta.km} km</strong> · Estimated arrival: <strong style={{ color: "#f59e0b" }}>{acceptedEta.minutes} minutes</strong> (avg. 30 km/h)
             </div>
           </div>
-          <button onClick={() => setAcceptedEta(null)} className="sm:ml-auto p-2 text-[#64748b] hover:text-white transition-colors">✕</button>
+          <button onClick={() => setAcceptedEta(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>✕</button>
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        {/* Map Container */}
-        <div className="flex-1 glass-card p-0 relative min-h-[400px] md:min-h-[500px] lg:min-h-[600px] overflow-hidden group">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
+        {/* Map placeholder */}
+        <div className="glass-card" style={{ position: "relative", minHeight: 500, overflow: "hidden" }}>
+          
           {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && isLoaded ? (
             <GoogleMap mapContainerStyle={mapContainerStyle} zoom={11} center={defaultCenter} options={mapOptions}>
               {needs.map((m) => (
@@ -130,6 +130,7 @@ export default function MapPage() {
                 ) : null
               ))}
               
+              {/* User location (center mock) */}
               <Marker
                 position={defaultCenter}
                 icon={{
@@ -144,95 +145,90 @@ export default function MapPage() {
 
               {selectedMarker && selectedMarker.location?.lat && (
                 <InfoWindow position={{ lat: selectedMarker.location.lat, lng: selectedMarker.location.lng }} onCloseClick={() => setSelected(null)}>
-                  <div className="p-3 max-w-[200px] bg-slate-900">
-                     <div className="font-black text-sm text-slate-100 mb-1">{selectedMarker.title}</div>
-                     <div className="text-[10px] text-slate-400 font-bold mb-3">{selectedMarker.location?.address}</div>
-                     <button onClick={() => handleAccept(selectedMarker)} className="w-full py-2 bg-cyan-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg shadow-lg shadow-cyan-500/20 active:scale-95 transition-transform">
-                        Accept Help Request
-                     </button>
+                  <div style={{ color: "#000", padding: 4 }}>
+                     <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>{selectedMarker.title}</div>
+                     <div style={{ fontSize: 12, color: "#444", marginTop: 4 }}>{selectedMarker.location?.address}</div>
+                     <button onClick={() => handleAccept(selectedMarker)} style={{
+                        marginTop: 10, width: "100%", padding: "6px", borderRadius: 6, border: "none",
+                        background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff",
+                        fontWeight: 700, cursor: "pointer", fontSize: 12,
+                      }}>Accept</button>
                   </div>
                 </InfoWindow>
               )}
             </GoogleMap>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-[#0d2b1d] via-[#0f3a3e] to-[#0d2b3a] flex flex-col items-center justify-center p-8 text-center gap-6">
-              <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
-                <div className="grid grid-cols-10 grid-rows-10 h-full w-full">
-                  {Array.from({ length: 100 }).map((_, i) => (
-                    <div key={i} className="border border-[#14b8c4]/20" />
-                  ))}
-                </div>
-              </div>
-              <div className="z-10 bg-slate-900/40 p-10 rounded-[40px] backdrop-blur-xl border border-white/5 ring-1 ring-white/10">
-                <div className="text-6xl mb-6 drop-shadow-2xl">🗺️</div>
-                <div className="text-xl md:text-2xl font-black text-cyan-400 mb-2 uppercase tracking-tighter">Maps Disabled</div>
-                <p className="text-sm md:text-base text-[#94a3b8] font-medium max-w-xs leading-relaxed">
-                  Real-time GPS tracking requires a valid API key. Add it to your configs to unlock.
-                </p>
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(135deg, #0d2b1d, #0f3a3e, #0d2b3a)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexDirection: "column", gap: 10
+            }}>
+              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.1 }}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <g key={i}>
+                    <line x1={`${i * 10}%`} y1="0" x2={`${i * 10}%`} y2="100%" stroke="#14b8c4" strokeWidth="1" />
+                    <line x1="0" y1={`${i * 10}%`} x2="100%" y2={`${i * 10}%`} stroke="#14b8c4" strokeWidth="1" />
+                  </g>
+                ))}
+              </svg>
+              <div style={{ zIndex: 10, textAlign: "center", padding: 24 }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#14b8c4", marginBottom: 6 }}>Google Maps Not Configured</div>
+                <p style={{ fontSize: 14, color: "#94a3b8" }}>Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to .env.local to activate real-time mapping.</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Sidebar / Bottom List */}
-        <div className="w-full lg:w-[320px] flex flex-col gap-4">
-          <div className="text-[10px] font-black text-[#94a3b8] uppercase tracking-[0.2em] mb-2 px-1">
-            {needs.length} Active Requests
+        {/* Sidebar list */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#94a3b8", marginBottom: 4 }}>
+            {needs.length} Requests Nearby
           </div>
-          
-          <div className="flex flex-col gap-3 max-h-[400px] lg:max-h-[500px] overflow-y-auto pr-1 custom-scrollbar">
-            {needs.map((m) => {
-              const distKm = userCoords && m.location?.lat && m.location?.lng
-                ? haversineKm(userCoords.lat, userCoords.lng, m.location.lat, m.location.lng).toFixed(1)
-                : null;
-              const isActive = selected === m.id;
-              
-              return (
-                <button 
-                  key={m.id} 
-                  onClick={() => setSelected(isActive ? null : m.id)} 
-                  className={`
-                    p-5 rounded-2xl border transition-all text-left shadow-lg
-                    ${isActive 
-                      ? `${priorityBorderColors[m.priority] || "border-white/20"} ${priorityBgColors[m.priority] || "bg-white/5"} ring-1 ring-white/10 scale-[1.02]` 
-                      : "border-white/5 bg-[#0d1f24]/80 hover:bg-white/5"}
-                  `}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="text-3xl drop-shadow-md">🤝</div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-extrabold text-sm text-[#f0f9fa] truncate tracking-tight">{m.title}</div>
-                      <div className="text-[11px] font-medium text-[#64748b] mt-1 truncate">
-                        {m.location?.address}
-                      </div>
-                      {distKm && (
-                        <div className="inline-flex items-center gap-2 mt-3 text-[10px] font-black text-cyan-400 uppercase tracking-widest bg-cyan-400/5 px-2 py-1 rounded">
-                          📍 {distKm} km · {Math.round(Number(distKm) / 30 * 60)}m
-                        </div>
-                      )}
-                    </div>
-                    <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 animate-pulse mt-1 shadow-[0_0_8px]`} 
-                         style={{ backgroundColor: priorityColors[m.priority] || '#fff', boxShadow: `0 0 10px ${priorityColors[m.priority] || '#fff'}44` }} />
+          {needs.map((m) => {
+            const distKm = userCoords && m.location?.lat && m.location?.lng
+              ? haversineKm(userCoords.lat, userCoords.lng, m.location.lat, m.location.lng).toFixed(1)
+              : null;
+            return (
+            <button key={m.id} onClick={() => setSelected(selected === m.id ? null : m.id)} style={{
+              padding: "14px 16px", borderRadius: 12, border: "1px solid",
+              borderColor: selected === m.id ? priorityColors[m.priority] || "#fff" : "rgba(20,184,196,0.15)",
+              background: selected === m.id ? `${priorityColors[m.priority] || "#fff"}12` : "rgba(13,31,36,0.8)",
+              cursor: "pointer", textAlign: "left", transition: "all 0.2s",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 22 }}>🤝</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.title}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {m.location?.address}
                   </div>
-                </button>
-              );
-            })}
-          </div>
+                  {distKm && (
+                    <div style={{ fontSize: 11, color: "#14b8c4", marginTop: 3 }}>📍 {distKm} km · ~{Math.round(Number(distKm) / 30 * 60)} min away</div>
+                  )}
+                </div>
+                <span style={{
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: priorityColors[m.priority] || "#fff", flexShrink: 0,
+                }} />
+              </div>
+            </button>
+            );
+          })}
 
           {/* Legend */}
-          <div className="glass-card p-6 mt-2 border-white/5 ring-1 ring-white/5 bg-[#0d1f24]/40">
-            <h4 className="text-[10px] font-black text-[#475569] uppercase tracking-[0.2em] mb-4">Priority Map</h4>
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries(priorityColors).map(([key, color]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full shadow-lg" style={{ backgroundColor: color }} />
-                  <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">{key}</span>
-                </div>
-              ))}
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#6366f1] shadow-lg shadow-indigo-500/20" />
-                <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-widest">Me</span>
+          <div className="glass-card" style={{ padding: 14, marginTop: 4 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 10 }}>LEGEND</div>
+            {Object.entries(priorityColors).map(([key, color]) => (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: "50%", background: color }} />
+                <span style={{ fontSize: 12, color: "#94a3b8", textTransform: "capitalize" }}>{key} Priority</span>
               </div>
+            ))}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#6366f1" }} />
+              <span style={{ fontSize: 12, color: "#94a3b8" }}>Your Location</span>
             </div>
           </div>
         </div>
