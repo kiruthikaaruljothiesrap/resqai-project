@@ -5,7 +5,7 @@ import { createGroup, subscribeToGroups, subscribeToGroupMessages, sendMessage, 
 import { Message } from "@/types";
 import { subscribeToUsers } from "@/lib/firestore";
 import { UserProfile } from "@/lib/auth";
-import { FriendRequest, subscribeToFriendRequests, subscribeToFriends, sendFriendRequest, acceptFriendRequest, rejectFriendRequest } from "@/lib/social";
+import { FriendRequest, subscribeToFriendRequests, subscribeToFriends, sendFriendRequest, acceptFriendRequest, rejectFriendRequest, blockUser, subscribeToBlockedUsers } from "@/lib/social";
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371;
@@ -44,6 +44,9 @@ export default function CommunityPage() {
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<FriendRequest[]>([]);
   const [activeFriend, setActiveFriend] = useState<FriendRequest | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
 
   const [activeFriendChat, setActiveFriendChat] = useState<string | null>(null);
   const [dmMessages, setDmMessages] = useState<Message[]>([]);
@@ -73,13 +76,15 @@ export default function CommunityPage() {
     let unsubReq = () => {};
     let unsubFriends = () => {};
     let unsubInvites = () => {};
+    let unsubBlocked = () => {};
 
     if (profile?.uid) {
       unsubReq = subscribeToFriendRequests(profile.uid, setFriendRequests);
       unsubFriends = subscribeToFriends(profile.uid, setFriends);
       unsubInvites = subscribeToCommunityInvites(profile.uid, setCommunityInvites);
+      unsubBlocked = subscribeToBlockedUsers(profile.uid, setBlockedUsers);
     }
-    return () => { unsubUsers(); unsubReq(); unsubFriends(); unsubInvites(); };
+    return () => { unsubUsers(); unsubReq(); unsubFriends(); unsubInvites(); unsubBlocked(); };
   }, [profile?.uid]);
 
   useEffect(() => {
@@ -146,6 +151,7 @@ export default function CommunityPage() {
     v.uid !== profile?.uid && 
     !friends.some(f => f.fromId === v.uid || f.toId === v.uid) &&
     !friendRequests.some(f => f.fromId === v.uid || f.toId === v.uid) &&
+    !blockedUsers.some(b => b.blockedUserId === v.uid) &&
     v.role === "volunteer"
   ).map(v => {
     let distance = Infinity;
@@ -159,7 +165,10 @@ export default function CommunityPage() {
     ? nearbyVolunteers.filter(v => (v.username||"").toLowerCase().includes(searchFriend.toLowerCase()) || v.firstName.toLowerCase().includes(searchFriend.toLowerCase()))
     : nearbyVolunteers;
 
-  const uniqueFriends = Array.from(new Map(friends.map(f => {
+  const uniqueFriends = Array.from(new Map(friends.filter(f => {
+    const friendId = f.fromId === profile?.uid ? f.toId : f.fromId;
+    return !blockedUsers.some(b => b.blockedUserId === friendId);
+  }).map(f => {
     const friendId = f.fromId === profile?.uid ? f.toId : f.fromId;
     return [friendId, f];
   })).values());
@@ -395,10 +404,34 @@ export default function CommunityPage() {
                 ))
               ) : (
                 <>
-                  <div style={{ padding: "10px 16px" }}>
+                  <div style={{ padding: "10px 16px", display: "flex", gap: 8, alignItems: "center" }}>
                     <input value={searchMyFriends} onChange={e => setSearchMyFriends(e.target.value)} placeholder="🔍 Search friends..." 
-                           style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 13 }} />
+                           style={{ flex: 1, padding: "8px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(20,184,196,0.2)", borderRadius: 8, color: "#f0f9fa", fontSize: 13 }} />
+                    <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedFriends([]); }} style={{ padding: "8px", borderRadius: 8, border: "1px solid rgba(20,184,196,0.3)", background: isSelectMode ? "rgba(20,184,196,0.2)" : "transparent", color: "#14b8c4", cursor: "pointer" }}>
+                       ☑ Enable Select Options
+                    </button>
                   </div>
+                  {isSelectMode && selectedFriends.length > 0 && (
+                     <div style={{ padding: "10px 16px", display: "flex", gap: 10, background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                        <button onClick={async () => {
+                             if (!confirm(`Are you sure you want to disconnect from ${selectedFriends.length} friends?`)) return;
+                             for (const fId of selectedFriends) await rejectFriendRequest(fId);
+                             setSelectedFriends([]);
+                             setIsSelectMode(false);
+                        }} style={{ flex: 1, padding: "8px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.1)", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>❌ Disconnect Selected</button>
+                        <button onClick={async () => {
+                             if (!confirm(`Are you sure you want to BLOCK ${selectedFriends.length} friends?`)) return;
+                             for (const fId of selectedFriends) {
+                                const blockedUid = uniqueFriends.find(f => f.id === fId)?.fromId === profile?.uid ? uniqueFriends.find(f => f.id === fId)?.toId : uniqueFriends.find(f => f.id === fId)?.fromId;
+                                await rejectFriendRequest(fId);
+                                if (profile && blockedUid) await blockUser(profile.uid, blockedUid);
+                             }
+                             setSelectedFriends([]);
+                             setIsSelectMode(false);
+                             alert("Users successfully blocked.");
+                        }} style={{ flex: 1, padding: "8px", borderRadius: 8, border: "1px solid rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.1)", color: "#ef4444", fontWeight: 700, cursor: "pointer", fontSize: 12 }}>🚫 Block Selected</button>
+                     </div>
+                  )}
                   {filteredMyFriends.length === 0 ? <div style={{padding:20, color:"#94a3b8", textAlign:"center"}}>You have no friends yet. Add nearby volunteers!</div> : filteredMyFriends.map(f => {
                      const isMe = f.fromId === profile?.uid;
                      const friendName = isMe ? f.toName : f.fromName;
@@ -406,19 +439,29 @@ export default function CommunityPage() {
                      const friendAvatar = isMe ? f.toAvatar : f.fromAvatar;
                      
                      return (
-                        <button key={f.id} onClick={() => { setActiveFriend(f); setActiveFriendChat(null); }} style={{
-                          width: "100%", padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer",
-                          background: activeFriend?.id === f.id ? "rgba(20,184,196,0.1)" : "transparent",
-                          borderBottom: "1px solid rgba(255,255,255,0.05)",
-                        }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(20,184,196,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{friendAvatar ? <img src={friendAvatar} style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover"}}/> : "👤"}</div>
-                            <div style={{ flex: 1, overflow: "hidden" }}>
-                              <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{friendName}</div>
-                              <div style={{ fontSize: 12, color: "#64748b" }}>@{friendUname}</div>
-                            </div>
-                          </div>
-                        </button>
+                        <div key={f.id} style={{ display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                           {isSelectMode && (
+                              <input type="checkbox" checked={selectedFriends.includes(f.id)} onChange={(e) => {
+                                 if (e.target.checked) setSelectedFriends(s => [...s, f.id]);
+                                 else setSelectedFriends(s => s.filter(id => id !== f.id));
+                              }} style={{ marginLeft: 16, width: 18, height: 18, cursor: "pointer" }} />
+                           )}
+                           <button onClick={() => { if (!isSelectMode) { setActiveFriend(f); setActiveFriendChat(null); } else {
+                               if (selectedFriends.includes(f.id)) setSelectedFriends(s => s.filter(id => id !== f.id));
+                               else setSelectedFriends(s => [...s, f.id]);
+                           }}} style={{
+                             flex: 1, padding: "14px 16px", border: "none", textAlign: "left", cursor: "pointer",
+                             background: activeFriend?.id === f.id && !isSelectMode ? "rgba(20,184,196,0.1)" : "transparent",
+                           }}>
+                             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                               <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(20,184,196,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{friendAvatar ? <img src={friendAvatar} style={{width:"100%",height:"100%",borderRadius:"50%",objectFit:"cover"}}/> : "👤"}</div>
+                               <div style={{ flex: 1, overflow: "hidden" }}>
+                                 <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{friendName}</div>
+                                 <div style={{ fontSize: 12, color: "#64748b" }}>@{friendUname}</div>
+                               </div>
+                             </div>
+                           </button>
+                        </div>
                      );
                   })}
                 </>
@@ -537,6 +580,11 @@ export default function CommunityPage() {
                    
                    <div style={{ display: "flex", gap: 10 }}>
                      <button onClick={() => setActiveFriendChat(friendUserId)} style={{ padding: "10px 24px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#14b8c4,#0f6b71)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>💬 Start Chat</button>
+                     <button onClick={async () => {
+                         if (!confirm("Are you sure you want to completely disconnect from this user?")) return;
+                         await rejectFriendRequest(activeFriend.id);
+                         setActiveFriend(null);
+                     }} style={{ padding: "10px 24px", borderRadius: 10, border: "1px solid rgba(239,68,68,0.5)", background: "rgba(239,68,68,0.1)", color: "#ef4444", fontWeight: 700, cursor: "pointer" }}>❌ Disconnect / Block</button>
                    </div>
                 </div>
                );

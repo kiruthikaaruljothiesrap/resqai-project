@@ -155,3 +155,18 @@ export const subscribeToFriends = (userId: string, callback: (friends: FriendReq
     callback(myFriends);
   });
 };
+
+export const blockUser = async (userId: string, blockedUserId: string) => {
+  await addDoc(collection(db, "blockedUsers"), {
+    userId,
+    blockedUserId,
+    createdAt: new Date().toISOString()
+  });
+};
+
+export const subscribeToBlockedUsers = (userId: string, callback: (blocks: any[]) => void) => {
+  const q = query(collection(db, "blockedUsers"), where("userId", "==", userId));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+};
