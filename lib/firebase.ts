@@ -20,12 +20,18 @@ let authInstance: any = null;
 let dbInstance: any = null;
 let storageInstance: any = null;
 
-if (typeof window !== "undefined" && firebaseConfig.projectId && firebaseConfig.projectId !== "YOUR_PROJECT_ID") {
+if (firebaseConfig.projectId && firebaseConfig.projectId !== "YOUR_PROJECT_ID") {
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  try { analyticsInstance = getAnalytics(app); } catch (e) {}
-  try { authInstance = getAuth(app); } catch (e) {}
+  
+  // These can run on server or client
   try { dbInstance = getFirestore(app); } catch (e) {}
+  try { authInstance = getAuth(app); } catch (e) {}
   try { storageInstance = getStorage(app); } catch (e) {}
+
+  // Analytics only works on the client
+  if (typeof window !== "undefined") {
+    try { analyticsInstance = getAnalytics(app); } catch (e) {}
+  }
 }
 
 export const analytics = analyticsInstance;

@@ -57,7 +57,7 @@ function SignupPageContent() {
       const res = await fetch("/api/otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", phone: form.phoneNo, deliveryMethod }),
+        body: JSON.stringify({ phone: form.phoneNo, deliveryMethod }),
       });
       const data = await res.json();
       if (data.success) {
@@ -75,9 +75,9 @@ function SignupPageContent() {
     setOtpError("");
     try {
       const res = await fetch("/api/otp", {
-        method: "POST",
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "verify", phone: form.phoneNo, otp: otpValue }),
+        body: JSON.stringify({ phone: form.phoneNo, otp: otpValue }),
       });
       const data = await res.json();
       if (!data.success) { setOtpError(data.error || "Invalid OTP."); return; }
