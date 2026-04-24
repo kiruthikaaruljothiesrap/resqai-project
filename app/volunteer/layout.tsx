@@ -28,10 +28,23 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const router = useRouter();
   const { profile } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Default false on mobile, we can auto-open using CSS or a useEffect
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(true);
+      else setSidebarOpen(false);
+    };
+    handleResize(); // Init
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [status, setStatus] = useState<"online" | "busy" | "offline">(
     (profile?.status as any) || "online"
@@ -70,23 +83,29 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-dark)" }}>
+      {/* Mobile Overlay */}
+      {isMobile && sidebarOpen && (
+        <div className="mobile-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar - Fluid & Adaptive */}
-      <aside style={{
+      <aside className={isMobile ? "mobile-sidebar" : ""} style={{
         width: sidebarOpen ? "var(--sidebar-width)" : "0",
         minWidth: sidebarOpen ? "var(--sidebar-width)" : "0",
+        left: isMobile ? (sidebarOpen ? "0" : "-100%") : "auto",
+        position: isMobile ? "fixed" : "sticky",
         overflow: "hidden",
         background: "var(--bg-card)",
         borderRight: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
         transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-        position: "sticky",
         top: 0,
         height: "100vh",
         zIndex: 1000,
       }}>
         {/* Logo */}
-        <div style={{ padding: "1.5rem 1.25rem", borderBottom: "1px solid rgba(20,184,196,0.1)" }}>
+        <div style={{ padding: "1.5rem 1.25rem", borderBottom: "1px solid rgba(20,184,196,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
             <img src="/logo.png" alt="ResQAI" style={{ width: "2.5rem", height: "2.5rem", borderRadius: "0.75rem", objectFit: "contain" }} />
             <div style={{ opacity: sidebarOpen ? 1 : 0, transition: "opacity 0.2s" }}>
@@ -94,6 +113,9 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
               <div style={{ fontSize: "0.7rem", color: "var(--teal-500)", whiteSpace: "nowrap" }}>Volunteer Portal</div>
             </div>
           </div>
+          {isMobile && (
+             <button onClick={() => setSidebarOpen(false)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "1.5rem" }}>✕</button>
+          )}
         </div>
 
         {/* Status selector */}
@@ -112,7 +134,7 @@ export default function VolunteerLayout({ children }: { children: React.ReactNod
         {/* Nav */}
         <nav style={{ flex: 1, padding: "0.75rem 0.6rem", overflowY: "auto", overflowX: "hidden" }}>
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className={`sidebar-item${pathname === item.href ? " active" : ""}`} title={t(`sidebar.${item.key}`)}>
+            <Link key={item.href} href={item.href} onClick={() => { if(isMobile) setSidebarOpen(false); }} className={`sidebar-item${pathname === item.href ? " active" : ""}`} title={t(`sidebar.${item.key}`)}>
               <span style={{ fontSize: "1.25rem" }}>{item.icon}</span>
               <span style={{ opacity: sidebarOpen ? 1 : 0, transition: "opacity 0.2s", whiteSpace: "nowrap" }}>{t(`sidebar.${item.key}`)}</span>
             </Link>

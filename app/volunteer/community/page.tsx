@@ -316,9 +316,9 @@ export default function CommunityPage() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16, height: "calc(100vh - 220px)" }}>
+      <div className="responsive-chat-grid">
         {/* Left Sidebar */}
-        <div className="glass-card" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
+        <div className="glass-card responsive-chat-left" style={{ overflow: "hidden", display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", padding: "8px", gap: 4, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             {mainTab === "groups" ? (
               (["public", "private", "invites"] as const).map((t) => (
@@ -471,7 +471,7 @@ export default function CommunityPage() {
         </div>
 
         {/* Right Panel */}
-        <div className="glass-card" style={{ display: "flex", flexDirection: "column" }}>
+        <div className="glass-card responsive-chat-right" style={{ display: "flex", flexDirection: "column" }}>
           {mainTab === "groups" ? (
             activeGroupData ? (
               <>

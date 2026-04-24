@@ -165,12 +165,58 @@ img {
 
 @media (max-width: 1024px) {
   :root {
-    --sidebar-width: 80px;
+    --sidebar-width: 220px;
   }
 }
 
 @media (max-width: 768px) {
   :root {
-    --sidebar-width: 0px;
+    --sidebar-width: 240px;
   }
+  
+  /* Make chat panels stack on mobile */
+  .responsive-chat-grid {
+    display: flex !important;
+    flex-direction: column;
+    height: auto !important;
+    min-height: calc(100vh - 220px);
+  }
+  
+  .responsive-chat-left {
+    min-height: 400px;
+  }
+  
+  .responsive-chat-right {
+    min-height: 500px;
+  }
+
+  /* Overlay sidebar for mobile */
+  .mobile-sidebar {
+    position: fixed !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  }
+}
+
+@media (min-width: 769px) {
+  .responsive-chat-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    height: calc(100vh - 220px);
+  }
+  
+  .mobile-overlay {
+    display: none !important;
+  }
+}
+
+/* Base overlay style used for darkening background on mobile nav open */
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9998;
 }

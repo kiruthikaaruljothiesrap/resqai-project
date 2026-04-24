@@ -64,14 +64,15 @@ export default function SplashPage() {
           width: "clamp(80px, 15vw, 120px)",
           height: "clamp(80px, 15vw, 120px)",
           borderRadius: "50%",
-          background: "linear-gradient(135deg, var(--teal-500), var(--amber-500))",
+          background: "#ffffff",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           margin: "0 auto 2rem",
-          boxShadow: "0 0 40px rgba(20,184,196,0.3)",
+          boxShadow: "0 0 40px rgba(20,184,196,0.6)",
+          overflow: "hidden",
         }}>
-          <img src="/logo.png" alt="ResQAI" style={{ width: "60%", height: "60%", objectFit: "contain" }} />
+          <img src="/logo.png" alt="ResQAI" style={{ width: "100%", height: "100%", objectFit: "contain", transform: "scale(1.1)" }} />
         </div>
 
         <h1 style={{
