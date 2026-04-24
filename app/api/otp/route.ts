@@ -7,7 +7,7 @@ const otpStore = new Map<string, { otp: string; expiresAt: number }>();
 
 export async function POST(req: Request) {
   try {
-    const { action, phone, otp } = await req.json();
+    const { action, phone, otp, deliveryMethod = "sms" } = await req.json();
 
     if (!phone) {
       return NextResponse.json({ error: "Phone number is required." }, { status: 400 });
@@ -22,17 +22,27 @@ export async function POST(req: Request) {
 
       otpStore.set(normalizedPhone, { otp: generatedOtp, expiresAt });
 
-      // Integrate Twilio for Production SMS Validation
+      // Integrate Twilio for Production SMS & WhatsApp Validation
       if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_PHONE_NUMBER) {
         const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        
+        let fromNumber = process.env.TWILIO_PHONE_NUMBER;
+        let toNumber = normalizedPhone;
+
+        if (deliveryMethod === "whatsapp") {
+          // Use a specific whatsapp number if provided, otherwise fallback to the standard number formatted for whatsapp
+          fromNumber = process.env.TWILIO_WHATSAPP_NUMBER ? `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}` : `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`;
+          toNumber = `whatsapp:${normalizedPhone}`;
+        }
+
         await client.messages.create({
-          body: `Your ResQAI verification code is: ${generatedOtp}. It expires in 10 minutes.`,
-          from: process.env.TWILIO_PHONE_NUMBER,
-          to: normalizedPhone
+          body: `*ResQAI* \nYour verification code is: *${generatedOtp}*.\nIt expires in 10 minutes.`,
+          from: fromNumber,
+          to: toNumber
         });
-        console.log(`[Twilio SMS] Secure OTP dispatched to ${normalizedPhone}`);
+        console.log(`[Twilio ${deliveryMethod.toUpperCase()}] Secure OTP dispatched to ${normalizedPhone}`);
       } else {
-        console.log(`[OTP DEV MODE FALLBACK] ${normalizedPhone} → ${generatedOtp}`);
+        console.log(`[OTP DEV MODE FALLBACK] ${normalizedPhone} (${deliveryMethod}) → ${generatedOtp}`);
       }
 
       return NextResponse.json({

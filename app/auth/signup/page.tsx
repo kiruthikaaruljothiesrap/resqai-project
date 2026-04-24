@@ -29,6 +29,7 @@ function SignupPageContent() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<"form" | "otp" | "verify">("form");
   const [captchaDone, setCaptchaDone] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<"sms" | "whatsapp">("sms");
   const [otpValue, setOtpValue] = useState("");
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -56,7 +57,7 @@ function SignupPageContent() {
       const res = await fetch("/api/otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", phone: form.phoneNo }),
+        body: JSON.stringify({ action: "send", phone: form.phoneNo, deliveryMethod }),
       });
       const data = await res.json();
       if (data.success) {
@@ -110,10 +111,10 @@ function SignupPageContent() {
     return (
       <div style={pageStyle}>
         <div className="glass-card fade-up" style={{ maxWidth: 420, width: "100%", padding: 40, textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>📱</div>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>{deliveryMethod === "whatsapp" ? "💬" : "📱"}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Verify Phone Number</h2>
           <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 24 }}>
-            An OTP has been sent to <strong style={{ color: "#14b8c4" }}>{form.phoneNo}</strong>
+            An OTP has been sent via {deliveryMethod === "whatsapp" ? "WhatsApp" : "SMS"} to <strong style={{ color: "#14b8c4" }}>{form.phoneNo}</strong>
           </p>
 
           {demoOtp && (
@@ -221,6 +222,24 @@ function SignupPageContent() {
             </div>
           </div>
 
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>How should we send your verification code? *</label>
+            <div style={{ display: "flex", gap: 10 }}>
+              <div 
+                onClick={() => setDeliveryMethod("sms")}
+                style={{ flex: 1, padding: "10px", textAlign: "center", borderRadius: 10, cursor: "pointer", border: `1px solid ${deliveryMethod === "sms" ? "#14b8c4" : "rgba(255,255,255,0.1)"}`, background: deliveryMethod === "sms" ? "rgba(20,184,196,0.1)" : "rgba(255,255,255,0.05)" }}
+              >
+                📱 SMS
+              </div>
+              <div 
+                onClick={() => setDeliveryMethod("whatsapp")}
+                style={{ flex: 1, padding: "10px", textAlign: "center", borderRadius: 10, cursor: "pointer", border: `1px solid ${deliveryMethod === "whatsapp" ? "#25D366" : "rgba(255,255,255,0.1)"}`, background: deliveryMethod === "whatsapp" ? "rgba(37,211,102,0.1)" : "rgba(255,255,255,0.05)" }}
+              >
+                💬 WhatsApp
+              </div>
+            </div>
+          </div>
+
           {role === "volunteer" && (
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Volunteer Type</label>
@@ -310,7 +329,7 @@ function SignupPageContent() {
           {error && <p style={{ color: "#f87171", fontSize: 13, marginBottom: 12 }}>⚠️ {error}</p>}
 
           <button type="submit" disabled={loading} style={btnStyle}>
-            {loading ? "Creating account…" : "Create Account →"}
+            {loading ? "Creating account…" : `Create Account (${deliveryMethod === "sms" ? "SMS" : "WhatsApp"} Auth) →`}
           </button>
 
           <div style={{ display: "flex", alignItems: "center", margin: "20px 0", gap: 12 }}>
@@ -417,3 +436,4 @@ const btnStyle: React.CSSProperties = {
   cursor: "pointer",
   transition: "opacity 0.2s",
 };
+
