@@ -59,6 +59,28 @@ export default function NGODashboard() {
         <p>Real-time volunteer network and task management.</p>
       </header>
 
+      {profile.status !== "verified" && (
+        <div className="glass-card" style={{ border: `1px solid ${profile.status === "rejected" ? "var(--rose-500)" : "var(--amber-500)"}`, background: `${profile.status === "rejected" ? "rgba(244,63,94,0.05)" : "rgba(245,158,11,0.05)"}`, padding: "1.5rem", borderRadius: "1rem", display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <div style={{ fontSize: "2.5rem" }}>{profile.status === "rejected" ? "❌" : "⏳"}</div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: "1.1rem", marginBottom: "0.25rem", color: profile.status === "rejected" ? "var(--rose-400)" : "var(--amber-400)" }}>
+              {profile.status === "rejected" ? "Acount Verification Rejected" : "Account Verification Pending"}
+            </h3>
+            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)" }}>
+              {profile.status === "rejected" 
+                ? "Your NGO certificate was rejected by the administration. Please update your details in your profile."
+                : "Your NGO details are being reviewed by our team. You have limited access until verified."}
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.href = "/ngo/profile"}
+            style={{ padding: "0.6rem 1.25rem", borderRadius: "0.75rem", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-primary)", fontWeight: 600, cursor: "pointer" }}
+          >
+            Go to Profile →
+          </button>
+        </div>
+      )}
+
       {/* Stats - Fully Responsive Grid */}
       <div className="auto-grid" style={{ "--min-width": "200px" } as any}>
         {stats.map((s) => (

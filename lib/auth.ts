@@ -9,7 +9,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 export interface UserProfile {
@@ -33,6 +33,8 @@ export interface UserProfile {
   phoneNo?: string;
   whatsappNo?: string;
   phoneVerified?: boolean;
+  adminNote?: string;
+  verifiedAt?: string;
   createdAt: string;
 }
 
@@ -146,7 +148,7 @@ export async function logInWithGoogle(role: "volunteer" | "ngo"): Promise<User> 
       email: user.email || "",
       avatarUrl: user.photoURL || undefined,
       role,
-      status: "online",
+      status: role === "ngo" ? "pending_verification" : "online",
       score: 0,
       badges: [],
       createdAt: new Date().toISOString(),
@@ -168,6 +170,16 @@ export async function resetPassword(email: string): Promise<void> {
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docSnap = await getDoc(doc(db, "users", uid));
   return docSnap.exists() ? (docSnap.data() as UserProfile) : null;
+}
+
+export function subscribeToUserProfile(uid: string, callback: (profile: UserProfile | null) => void) {
+  return onSnapshot(doc(db, "users", uid), (docSnap) => {
+    if (docSnap.exists()) {
+      callback(docSnap.data() as UserProfile);
+    } else {
+      callback(null);
+    }
+  });
 }
 
 export async function updateUserStatus(uid: string, status: "online" | "busy" | "offline") {

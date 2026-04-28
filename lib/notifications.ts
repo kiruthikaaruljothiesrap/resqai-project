@@ -7,7 +7,7 @@ export interface AppNotification {
   userId: string; // The user receiving the notification
   title: string;
   body: string;
-  type: "task_assigned" | "friend_request" | "system" | "broadcast";
+  type: "task_assigned" | "friend_request" | "system" | "broadcast" | "task";
   isRead: boolean;
   createdAt: string;
   link?: string;
@@ -22,8 +22,12 @@ export const requestFirebaseNotificationPermission = async (userId: string) => {
       const permission = await Notification.requestPermission();
       
       if (permission === 'granted') {
+        if (!process.env.NEXT_PUBLIC_FCM_VAPID_KEY) {
+          console.warn("FCM VAPID Key missing. Push notifications will not work.");
+          return;
+        }
         const token = await getToken(messaging, {
-          vapidKey: process.env.NEXT_PUBLIC_FCM_VAPID_KEY // Add your VAPID key to env later
+          vapidKey: process.env.NEXT_PUBLIC_FCM_VAPID_KEY
         });
         
         if (token) {
@@ -52,36 +56,56 @@ export const onForegroundMessage = (callback: (payload: any) => void) => {
 
 // ---- IN-APP NOTIFICATIONS ----
 
-export const createNotification = async (userId: string, title: string, body: string, type: AppNotification["type"], link?: string) => {
-  const notification: Omit<AppNotification, "id"> = {
-    userId,
-    title,
-    body,
-    type,
-    isRead: false,
-    createdAt: new Date().toISOString(),
-    link,
-  };
-  
-  await addDoc(collection(db, "notifications"), notification);
+export interface CreateNotificationParams {
+  userId: string;
+  title: string;
+  body: string;
+  type: AppNotification["type"];
+  link?: string;
+}
+
+export const createNotification = async ({ userId, title, body, type, link }: CreateNotificationParams) => {
+  try {
+    const notification: Omit<AppNotification, "id"> = {
+      userId,
+      title,
+      body,
+      type,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      link,
+    };
+    
+    await addDoc(collection(db, "notifications"), notification);
+  } catch (error) {
+    console.error("Failed to create in-app notification:", error);
+  }
 };
 
 export const subscribeToNotifications = (userId: string, callback: (notifications: AppNotification[]) => void) => {
   const q = query(
     collection(db, "notifications"), 
-    where("userId", "==", userId),
-    // orderBy("createdAt", "desc") // Requires index, leaving out for hackathon safety if index not built
+    where("userId", "==", userId)
   );
   
-  return onSnapshot(q, (snapshot) => {
-    let notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
-    // Sort in memory to avoid missing index errors
-    notifs.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    callback(notifs);
-  });
+  return onSnapshot(q, 
+    (snapshot) => {
+      let notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppNotification));
+      // Sort in memory to avoid missing index errors
+      notifs.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      callback(notifs);
+    },
+    (error) => {
+      console.error("Firestore Error in subscribeToNotifications:", error);
+    }
+  );
 };
 
 export const markNotificationRead = async (notificationId: string) => {
-  const ref = doc(db, "notifications", notificationId);
-  await updateDoc(ref, { isRead: true });
+  try {
+    const ref = doc(db, "notifications", notificationId);
+    await updateDoc(ref, { isRead: true });
+  } catch (error) {
+    console.error("Failed to mark notification as read:", error);
+  }
 };

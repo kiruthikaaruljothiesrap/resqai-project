@@ -4,9 +4,10 @@ import { VOLUNTEER_TYPES, BADGES } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { subscribeToTasks } from "@/lib/firestore";
+import { subscribeToTasks, subscribeToVolunteerHours } from "@/lib/firestore";
 import ProfileImageModal from "@/app/components/ProfileImageModal";
 import { auth } from "@/lib/firebase";
+
 
 export default function ProfilePage() {
   const { profile } = useAuth();
@@ -23,16 +24,28 @@ export default function ProfilePage() {
   const [smartStatus, setSmartStatus] = useState<"online" | "busy" | "offline">("offline");
   const [saving, setSaving] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [totalHours, setTotalHours] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
 
-  // Auto-detect status from task context
+
+  // Subscribe to hours worked from completed tasks
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const unsub = subscribeToVolunteerHours(profile.uid, setTotalHours);
+    return () => unsub();
+  }, [profile?.uid]);
+
+  // Count of completed tasks
   useEffect(() => {
     if (!profile?.uid) return;
     const unsub = subscribeToTasks(profile.uid, "volunteer", (tasks) => {
       const hasActiveTask = tasks.some(t => t.status === "accepted" || t.status === "in_progress");
       setSmartStatus(hasActiveTask ? "busy" : "online");
+      setCompletedCount(tasks.filter(t => t.status === "completed").length);
     });
     return () => unsub();
   }, [profile?.uid]);
+
 
   // Sync smart status to Firestore whenever it changes
   useEffect(() => {
@@ -190,12 +203,20 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Score & Level */}
+          {/* Score & Stats */}
           <div className="glass-card" style={{ padding: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 28, fontWeight: 800, color: "#f59e0b" }}>{profile.score || 0}</div>
-                <div style={{ fontSize: 12, color: "#94a3b8" }}>Score</div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16, gap: 8 }}>
+              <div style={{ textAlign: "center", flex: 1 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: "#f59e0b" }}>{profile.score || 0}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>Score</div>
+              </div>
+              <div style={{ textAlign: "center", flex: 1, borderLeft: "1px solid rgba(255,255,255,0.07)", paddingLeft: 8 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: "#14b8c4" }}>{totalHours}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>Hours</div>
+              </div>
+              <div style={{ textAlign: "center", flex: 1, borderLeft: "1px solid rgba(255,255,255,0.07)", paddingLeft: 8 }}>
+                <div style={{ fontSize: 26, fontWeight: 800, color: "#22c55e" }}>{completedCount}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>Tasks</div>
               </div>
             </div>
             <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>Level: <span style={{ color: "#14b8c4", fontWeight: 700 }}>{profile.score > 1000 ? "⚡ Advanced" : "Beginner"}</span></div>

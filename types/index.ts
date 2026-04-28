@@ -94,3 +94,14 @@ export const BADGES: Badge[] = [
   { id: "top_rated", name: "Top Rated", icon: "⭐", color: "#f97316" },
   { id: "medical_expert", name: "Medical Expert", icon: "⚕️", color: "#ec4899" },
 ];
+export interface NGOCertificate {
+  id?: string;
+  ngoId: string;
+  ngoName: string;
+  fileUrl: string;
+  fileName: string;
+  status: "pending" | "approved" | "rejected";
+  uploadedAt: string;
+  verifiedAt?: string;
+  adminNote?: string;
+}

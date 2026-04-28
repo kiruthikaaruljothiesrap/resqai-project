@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { subscribeToUsers } from "@/lib/firestore";
 import { UserProfile } from "@/lib/auth";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, collection, query, where, getDocs, limit, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { createNotification } from "@/lib/notifications";
 
 export default function AdminDashboard() {
   const [ngos, setNgos] = useState<UserProfile[]>([]);
@@ -22,9 +23,52 @@ export default function AdminDashboard() {
   const verifiedNgos = ngos.filter(n => n.status === "verified");
 
   const handleUpdateStatus = async (uid: string, status: "verified" | "rejected" | "pending_verification") => {
+    let adminNote = "";
+    if (status === "rejected") {
+      adminNote = prompt("Please provide a reason for rejection:") || "";
+      if (!adminNote) return alert("Rejection reason is required.");
+    }
+
     try {
-      await updateDoc(doc(db, "users", uid), { status });
+      // 1. Update User Profile
+      await updateDoc(doc(db, "users", uid), { 
+        status, 
+        adminNote: adminNote || null,
+        verifiedAt: status === "verified" ? new Date().toISOString() : null
+      });
+
+      // 2. Sync with ngoCertificates collection
+      const q = query(collection(db, "ngoCertificates"), where("ngoId", "==", uid), where("status", "==", "pending"), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const certDoc = snap.docs[0];
+        await updateDoc(certDoc.ref, {
+          status,
+          adminNote: adminNote || null,
+          verifiedAt: status === "verified" ? new Date().toISOString() : null
+        });
+      }
+
+      // 3. Send in-app notification to the NGO
+      await createNotification({
+        userId: uid,
+        title: status === "verified"
+          ? "🎉 Your NGO has been Approved!"
+          : status === "rejected"
+          ? "❌ NGO Verification Rejected"
+          : "⏳ NGO Status Updated",
+        body: status === "verified"
+          ? "Congratulations! Your NGO is now verified. You have full access to ResQAI."
+          : status === "rejected"
+          ? `Your NGO was rejected. Reason: ${adminNote}`
+          : "Your NGO status has been updated to Pending. Please check your dashboard.",
+        type: "system",
+        link: "/ngo/dashboard",
+      });
+
+      alert(`NGO status updated to ${status}`);
     } catch (err) {
+      console.error(err);
       alert("Failed to update status");
     }
   };
@@ -138,9 +182,14 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 600, fontSize: 14, color: "#f0f9fa" }}>{ngo.firstName} {ngo.lastName}</div>
                     <div style={{ fontSize: 11, color: "#64748b" }}>Reg: {ngo.ngoRegistrationNo}</div>
                   </div>
-                  <button onClick={() => handleUpdateStatus(ngo.uid, "pending_verification")} style={{ padding: "4px 8px", background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>
-                    Revoke
-                  </button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button onClick={() => verifyWithAI(ngo)} disabled={verifyingId === ngo.uid} style={{ padding: "4px 8px", background: "none", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 6, color: "#818cf8", fontSize: 11, cursor: "pointer" }}>
+                      {verifyingId === ngo.uid ? "..." : "🤖 Re-scan"}
+                    </button>
+                    <button onClick={() => handleUpdateStatus(ngo.uid, "pending_verification")} style={{ padding: "4px 8px", background: "none", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>
+                      Revoke
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

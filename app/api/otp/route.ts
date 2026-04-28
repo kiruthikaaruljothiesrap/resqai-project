@@ -16,10 +16,20 @@ export async function POST(req: Request) {
     const otp = Math.floor(100000 + Math.random() * 900000);
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
-    await setDoc(doc(db, "otps", normalizedPhone), {
-      otp,
-      expiresAt,
-    });
+    try {
+      await setDoc(doc(db, "otps", normalizedPhone), {
+        otp,
+        expiresAt,
+      });
+    } catch (fsError: any) {
+      console.error("Firestore Permission Error in OTP Route:", fsError);
+      if (fsError.code === 'permission-denied') {
+        return NextResponse.json({ 
+          error: "Database permission denied. Please ensure your Firestore rules allow public writes to the 'otps' collection." 
+        }, { status: 403 });
+      }
+      throw fsError;
+    }
 
     console.log("OTP:", otp); // temporary 
 

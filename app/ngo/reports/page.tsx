@@ -68,6 +68,31 @@ export default function ReportsPage() {
     const a = document.createElement("a"); a.href = url; a.download = "volunteer_report.csv"; a.click();
   };
 
+  const exportPDF = () => {
+    const printContent = `
+      <html><head><title>ResQAI Volunteer Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+        h2 { margin-bottom: 4px; }
+        p { color: #555; font-size: 13px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f0f9fa; text-align: left; padding: 10px 12px; font-size: 12px; color: #555; border-bottom: 2px solid #ddd; }
+        td { padding: 10px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+      </style></head><body>
+      <h2>ResQAI — Volunteer Performance Report</h2>
+      <p>Generated: ${new Date().toLocaleString()} | NGO: ${profile?.firstName} ${profile?.lastName}</p>
+      <table>
+        <thead><tr><th>Volunteer</th><th>Type</th><th>Tasks</th><th>Hours</th><th>Points</th><th>Rating</th></tr></thead>
+        <tbody>
+          ${filtered.map(r => `<tr><td>${r.volunteer}</td><td>${r.type}</td><td>${r.tasks}</td><td>${r.hours}h</td><td>${r.points}</td><td>${r.rating.toFixed(1)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+      </body></html>`;
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(printContent); win.document.close(); win.print(); }
+  };
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
@@ -75,9 +100,14 @@ export default function ReportsPage() {
           <h1 style={{ fontSize: 24, fontWeight: 800 }}>Reports</h1>
           <p style={{ color: "#94a3b8", fontSize: 14 }}>Analyze volunteer performance from completed tasks</p>
         </div>
-        <button onClick={exportCSV} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
-          📥 Export CSV
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={exportPDF} style={{ padding: "10px 20px", borderRadius: 10, border: "1px solid rgba(20,184,196,0.3)", background: "rgba(20,184,196,0.1)", color: "#14b8c4", fontWeight: 700, cursor: "pointer" }}>
+            🖨️ Export PDF
+          </button>
+          <button onClick={exportCSV} style={{ padding: "10px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+            📥 Export CSV
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>

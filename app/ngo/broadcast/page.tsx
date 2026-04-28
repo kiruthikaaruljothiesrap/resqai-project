@@ -1,13 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { saveBroadcast, subscribeToBroadcasts, getAllVolunteerIds } from "@/lib/firestore";
+import { createNotification } from "@/lib/notifications";
+import { Broadcast } from "@/types";
 
 export default function BroadcastPage() {
+  const { profile } = useAuth();
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [channels, setChannels] = useState<string[]>(["app"]);
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
   const [aiSituation, setAiSituation] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [history, setHistory] = useState<Broadcast[]>([]);
+
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const unsub = subscribeToBroadcasts(profile.uid, setHistory);
+    return () => unsub();
+  }, [profile?.uid]);
 
   const generateBroadcast = async () => {
     if (!aiSituation.trim()) return;
@@ -31,14 +45,61 @@ export default function BroadcastPage() {
     }
   };
 
-  const history = [
-    { id: 1, title: "Flood Alert – Zone B", message: "All volunteers please report to Zone B immediately. Heavy flooding reported.", channels: ["app", "sms", "whatsapp"], sentAt: "Today 9:00 AM", recipients: 156 },
-    { id: 2, title: "Medical Camp – Sector 4", message: "Medical volunteers needed at Sector 4 Community Center from 2–6pm.", channels: ["app"], sentAt: "Yesterday", recipients: 34 },
-  ];
+  const toggleChannel = (c: string) =>
+    setChannels((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
 
-  const toggleChannel = (c: string) => setChannels((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c]);
+  const send = async () => {
+    if (!title || !message || !channels.length || !profile) return;
+    setSending(true);
+    try {
+      // 1. Get all volunteer IDs
+      const volunteerIds = await getAllVolunteerIds();
 
-  const send = () => { if (!title || !message || !channels.length) return; setSent(true); setTimeout(() => setSent(false), 3000); setTitle(""); setMessage(""); };
+      // 2. Save broadcast to Firestore
+      await saveBroadcast({
+        ngoId: profile.uid,
+        title,
+        message,
+        channels: channels as ("app" | "sms" | "whatsapp")[],
+      }, volunteerIds.length);
+
+      // 3. Fan-out in-app notifications to all volunteers
+      if (channels.includes("app")) {
+        await Promise.all(
+          volunteerIds.map((vid) =>
+            createNotification({
+              userId: vid,
+              title: `📢 ${title}`,
+              body: message.slice(0, 200),
+              type: "broadcast",
+              link: "/volunteer/dashboard",
+            })
+          )
+        );
+      }
+
+      // 4. SMS / WhatsApp broadcast (calls /api/broadcast-sms if channels include sms/whatsapp)
+      if (channels.includes("sms") || channels.includes("whatsapp")) {
+        // Fire-and-forget — backend handles per-recipient SMS
+        fetch("/api/broadcast-sms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, message, channels, ngoId: profile.uid }),
+        }).catch((e) => console.warn("SMS broadcast fire-and-forget error:", e));
+      }
+
+      setSentCount(volunteerIds.length);
+      setSent(true);
+      setTitle("");
+      setMessage("");
+      setTimeout(() => setSent(false), 4000);
+    } catch (e) {
+      console.error("Broadcast failed:", e);
+      alert("Broadcast failed. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const channelIcons: Record<string, string> = { app: "📱 App", sms: "💬 SMS", whatsapp: "📲 WhatsApp" };
 
@@ -73,7 +134,7 @@ export default function BroadcastPage() {
                 {aiLoading ? "Generating..." : "✨ Generate"}
               </button>
             </div>
-            <p style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>AI will write the message — you can edit it below before sending.</p>
+            <p style={{ fontSize: 11, color: "#64748b", marginTop: 6 }}>AI writes the message — you can edit before sending.</p>
           </div>
 
           <div style={{ marginBottom: 16 }}>
@@ -105,36 +166,47 @@ export default function BroadcastPage() {
 
           {sent && (
             <div style={{ padding: "12px 16px", borderRadius: 10, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#22c55e", fontWeight: 600, marginBottom: 14, fontSize: 14 }}>
-              ✅ Broadcast sent to 156 volunteers via {channels.join(", ")}!
+              ✅ Broadcast sent to {sentCount} volunteers via {channels.join(", ")}!
             </div>
           )}
 
-          <button onClick={send} style={{ width: "100%", padding: "13px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", fontWeight: 700, fontSize: 16, cursor: "pointer" }}>
-            📢 Send Broadcast →
+          <button onClick={send} disabled={sending || !title || !message} style={{
+            width: "100%", padding: "13px", borderRadius: 10, border: "none",
+            background: sending ? "rgba(245,158,11,0.4)" : "linear-gradient(135deg,#f59e0b,#d97706)",
+            color: "#fff", fontWeight: 700, fontSize: 16,
+            cursor: sending ? "not-allowed" : "pointer",
+          }}>
+            {sending ? "Sending…" : "📢 Send Broadcast →"}
           </button>
         </div>
 
         {/* History */}
         <div className="glass-card" style={{ padding: 28 }}>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20 }}>📋 Broadcast History</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {history.map((h) => (
-              <div key={h.id} style={{ padding: 16, background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{h.title}</div>
-                <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 10 }}>{h.message}</p>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {h.channels.map((c) => (
-                      <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>{channelIcons[c]}</span>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>
-                    👥 {h.recipients} · {h.sentAt}
+          {history.length === 0 ? (
+            <div style={{ color: "#64748b", fontSize: 13, padding: 16, textAlign: "center" }}>
+              No broadcasts sent yet. Send your first alert above!
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {history.map((h) => (
+                <div key={h.id} style={{ padding: 16, background: "rgba(255,255,255,0.04)", borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>{h.title}</div>
+                  <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 10 }}>{h.message}</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {h.channels.map((c) => (
+                        <span key={c} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "rgba(245,158,11,0.12)", color: "#f59e0b" }}>{channelIcons[c] || c}</span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>
+                      👥 {h.recipientCount} · {new Date(h.sentAt).toLocaleString()}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { subscribeToTasks } from "@/lib/firestore";
+import { subscribeToTasks, getNGOProfile } from "@/lib/firestore";
 import { Task } from "@/types";
+import { UserProfile } from "@/lib/auth";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -11,10 +12,21 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [uploadModal, setUploadModal] = useState<string | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, string[]>>({});
+  const [ngoProfiles, setNgoProfiles] = useState<Record<string, UserProfile>>({});
+
 
   useEffect(() => {
     if (profile?.uid) {
-      const unsub = subscribeToTasks(profile.uid, "volunteer", setTasks);
+      const unsub = subscribeToTasks(profile.uid, "volunteer", (incoming) => {
+        setTasks(incoming);
+        // Lazy-fetch NGO profiles for accepted/active tasks
+        incoming.forEach(async (task) => {
+          if ((task.status === "accepted" || task.status === "in_progress" || task.status === "proof_submitted") && task.ngoId && !ngoProfiles[task.ngoId]) {
+            const ngo = await getNGOProfile(task.ngoId);
+            if (ngo) setNgoProfiles(prev => ({ ...prev, [task.ngoId]: ngo }));
+          }
+        });
+      });
       return () => unsub();
     }
   }, [profile?.uid]);
@@ -129,26 +141,40 @@ export default function TasksPage() {
                 <span>⏱️ ~{task.estimatedHours}h</span>
               </div>
 
-              {/* NGO Contact – show real contact info when accepted */}
-              {(st === "accepted" || st === "proof_submitted") && (
-                <div style={{
-                  background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)",
-                  borderRadius: 10, padding: "12px 16px", marginBottom: 14,
-                }}>
-                  <div style={{ fontWeight: 700, color: "#22c55e", fontSize: 14, marginBottom: 8 }}>📞 Communication Channel Open</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                    <a href={`mailto:ngo-${task.ngoId}@resqai.org`} style={{ fontSize: 13, color: "#14b8c4", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      ✉️ Email NGO
-                    </a>
-                    <a href={`tel:+911234567890`} style={{ fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      📱 Call: +91-1234567890
-                    </a>
-                    <a href={`https://wa.me/911234567890?text=Hi! I am working on task: ${task.title}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-                      💬 WhatsApp
-                    </a>
+              {/* NGO Contact – real contact info from Firestore when accepted */}
+              {(st === "accepted" || st === "in_progress" || st === "proof_submitted") && (() => {
+                const ngo = ngoProfiles[task.ngoId];
+                const phone = ngo?.phoneNo || ngo?.whatsappNo || "";
+                const email = ngo?.email || "";
+                const ngoName = ngo ? `${ngo.firstName} ${ngo.lastName}` : task.ngoId;
+                const waMsg = encodeURIComponent(`Hi ${ngoName}! I'm working on your task: "${task.title}". Ready to help!`);
+                return (
+                  <div style={{
+                    background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)",
+                    borderRadius: 10, padding: "12px 16px", marginBottom: 14,
+                  }}>
+                    <div style={{ fontWeight: 700, color: "#22c55e", fontSize: 14, marginBottom: 8 }}>📞 NGO Contact — {ngoName || "Loading…"}</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+                      {email && (
+                        <a href={`mailto:${email}?subject=Task: ${task.title}`} style={{ fontSize: 13, color: "#14b8c4", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                          ✉️ {email}
+                        </a>
+                      )}
+                      {phone && (
+                        <a href={`tel:${phone}`} style={{ fontSize: 13, color: "#22c55e", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                          📱 {phone}
+                        </a>
+                      )}
+                      {(ngo?.whatsappNo || phone) && (
+                        <a href={`https://wa.me/${(ngo?.whatsappNo || phone).replace(/[^0-9]/g, "")}?text=${waMsg}`} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#25D366", display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
+                          💬 WhatsApp NGO
+                        </a>
+                      )}
+                      {!ngo && <span style={{ fontSize: 12, color: "#64748b" }}>Loading contact info…</span>}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Actions */}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>

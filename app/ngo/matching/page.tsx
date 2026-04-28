@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { subscribeToNeeds, subscribeToUsers, createTask, updateNeedStatus } from "@/lib/firestore";
+import { createNotification } from "@/lib/notifications";
 import { Need, Task } from "@/types";
 import { UserProfile } from "@/lib/auth";
 
@@ -115,6 +116,16 @@ export default function SmartMatchingPage() {
       });
       // Updating need status keeps it off the matching screen permanently
       await updateNeedStatus(n.id, "accepted" as any);
+      
+      // Notify the volunteer
+      await createNotification({
+        userId: v.uid,
+        title: "New Task Assigned",
+        body: `You have been assigned to: ${n.title}`,
+        type: "task",
+        link: "/volunteer/tasks"
+      });
+
       setAssigned((prev) => ({ ...prev, [n.id]: v.uid }));
       setTimeout(() => setSelectedNeed(null), 1500);
     } catch(e) {

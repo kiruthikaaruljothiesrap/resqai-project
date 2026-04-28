@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { getUserProfile, UserProfile } from "@/lib/auth";
+import { getUserProfile, UserProfile, subscribeToUserProfile } from "@/lib/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -18,21 +18,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let profileUnsub: (() => void) | null = null;
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      
+      // Clear previous subscription
+      if (profileUnsub) {
+        profileUnsub();
+        profileUnsub = null;
+      }
+
       if (u) {
-        try {
-          const p = await getUserProfile(u.uid);
+        profileUnsub = subscribeToUserProfile(u.uid, (p) => {
           setProfile(p);
-        } catch (e) {
-          console.error("Failed to load profile", e);
-        }
+          setLoading(false);
+        });
       } else {
         setProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
-    return () => unsub();
+
+    return () => {
+      unsub();
+      if (profileUnsub) profileUnsub();
+    };
   }, []);
 
   return <AuthContext.Provider value={{ user, profile, loading }}>{children}</AuthContext.Provider>;

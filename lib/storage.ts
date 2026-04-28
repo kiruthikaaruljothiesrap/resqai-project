@@ -1,43 +1,61 @@
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "firebase/storage";
-import { storage } from "./firebase";
+/**
+ * Cloudinary Storage Utility
+ * Used as an alternative to Firebase Storage
+ */
 
-export const uploadFile = async (file: File, path: string): Promise<string> => {
+export const uploadFile = async (
+  file: File, 
+  path: string, 
+  onProgress?: (progress: number) => void
+): Promise<string> => {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    console.error("Cloudinary Config Missing:", { cloudName: !!cloudName, uploadPreset: !!uploadPreset });
+    throw new Error("Cloudinary configuration missing. Please check your .env.local file.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+  formData.append("folder", path.split('/')[0]); // Use the first part of the path as folder
+
   return new Promise((resolve, reject) => {
-    if (!storage) return reject(new Error("Firebase Storage is not initialized."));
-    
-    const storageRef = ref(storage, path);
-    const uploadTask = uploadBytesResumable(storageRef, file);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `https://api.cloudinary.com/v1_1/${cloudName}/upload`);
 
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        // Progress monitoring can be added here if needed
-      },
-      (error) => {
-        reject(error);
-      },
-      async () => {
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && onProgress) {
+        const progress = Math.round((event.loaded / event.total) * 100);
+        onProgress(progress);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const response = JSON.parse(xhr.responseText);
+        resolve(response.secure_url);
+      } else {
         try {
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadURL);
-        } catch (err) {
-          reject(err);
+          const error = JSON.parse(xhr.responseText);
+          const msg = error.error?.message || "Upload to Cloudinary failed";
+          if (msg.includes("Upload preset not found")) {
+            reject(new Error(`Cloudinary Error: Preset '${uploadPreset}' not found or not set to 'Unsigned'.`));
+          } else {
+            reject(new Error(msg));
+          }
+        } catch (e) {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
         }
       }
-    );
+    };
+
+    xhr.onerror = () => reject(new Error("Network error during upload"));
+    xhr.send(formData);
   });
 };
 
 export const deleteFile = async (url: string) => {
-  if (!storage) throw new Error("Firebase Storage is not initialized.");
-  // Basic deletion based on URL parsing for Firebase Storage
-  // Usually it's better to store and use the path. This is a simplified version.
-  try {
-    const urlObj = new URL(url);
-    const path = decodeURIComponent(urlObj.pathname.split("/o/")[1].split("?")[0]);
-    const fileRef = ref(storage, path);
-    await deleteObject(fileRef);
-  } catch (error) {
-    console.error("Error deleting file:", error);
-  }
+  console.warn("Delete not implemented for Cloudinary unsigned uploads (for security).");
 };

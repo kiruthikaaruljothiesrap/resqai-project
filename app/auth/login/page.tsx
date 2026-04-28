@@ -36,15 +36,11 @@ function LoginPageContent() {
          throw new Error(`This account belongs to a ${profile.role}, not ${role}. Please go back and select the correct role.`);
       }
 
-      // Check NGO Status Approval
-      if (profile.role === "ngo" && profile.status === "pending_verification") {
-        await logOut();
-        throw new Error("Your NGO account is still pending verification by the admin team. We will notify you once approved.");
+      // Proceed to allow login even if pending/rejected, the NGO dashboard/profile will handle the restriction UI
+      if (profile.role === "ngo" && (profile.status === "pending_verification" || profile.status === "rejected")) {
+        console.warn("NGO login allowed but status is restricted:", profile.status);
       }
-      if (profile.role === "ngo" && profile.status === "rejected") {
-        await logOut();
-        throw new Error("Your NGO account was rejected due to invalid certificate details. Please contact support.");
-      }
+
 
       // Redirect depending on role
       if (profile.role === "ngo") router.push("/ngo/dashboard");

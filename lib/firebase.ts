@@ -24,9 +24,10 @@ if (firebaseConfig.projectId && firebaseConfig.projectId !== "YOUR_PROJECT_ID") 
   app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   
   // These can run on server or client
-  try { dbInstance = getFirestore(app); } catch (e) {}
-  try { authInstance = getAuth(app); } catch (e) {}
-  try { storageInstance = getStorage(app); } catch (e) {}
+  try { dbInstance = getFirestore(app); } catch (e) { console.error("Firestore init error:", e); }
+  try { authInstance = getAuth(app); } catch (e) { console.error("Auth init error:", e); }
+  try { storageInstance = getStorage(app); } catch (e) { console.error("Storage init error:", e); }
+
 
   // Analytics only works on the client
   if (typeof window !== "undefined") {

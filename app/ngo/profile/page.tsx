@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, collection, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import ProfileImageModal from "@/app/components/ProfileImageModal";
 import { auth } from "@/lib/firebase";
+import { uploadFile } from "@/lib/storage";
 
 export default function NGOProfilePage() {
   const { profile } = useAuth();
@@ -20,6 +21,9 @@ export default function NGOProfilePage() {
   const [showImageModal, setShowImageModal] = useState(false);
   const [regNo, setRegNo] = useState("");
   const [estYear, setEstYear] = useState("");
+  const [certUrl, setCertUrl] = useState("");
+  const [uploadingCert, setUploadingCert] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     if (profile) {
@@ -30,6 +34,7 @@ export default function NGOProfilePage() {
       setLocation(profile.location?.address || "");
       setRegNo(profile.ngoRegistrationNo || "");
       setEstYear(profile.ngoEstablishedYear || "");
+      setCertUrl(profile.ngoCertificateUrl || "");
     }
   }, [profile]);
 
@@ -45,7 +50,7 @@ export default function NGOProfilePage() {
           const addr = data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
           setLocation(addr);
           if (profile?.uid) {
-            await updateDoc(doc(db, "users", profile.uid), { location: { address: addr, lat, lng } });
+            await setDoc(doc(db, "users", profile.uid), { location: { address: addr, lat, lng } }, { merge: true });
           }
         } catch {
           setLocation(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
@@ -59,12 +64,14 @@ export default function NGOProfilePage() {
     if (!profile?.uid) return;
     setSaving(true);
     try {
-      await updateDoc(doc(db, "users", profile.uid), {
+      await setDoc(doc(db, "users", profile.uid), {
         avatarUrl: avatarSrc,
         location: { address: location, lat: 0, lng: 0 },
         ngoRegistrationNo: regNo,
-        ngoEstablishedYear: estYear
-      });
+        ngoEstablishedYear: estYear,
+        ngoCertificateUrl: certUrl,
+        status: (certUrl !== profile.ngoCertificateUrl) ? "pending_verification" : profile.status
+      }, { merge: true });
       setEditMode(false);
     } catch (e) {
       console.error(e);
@@ -145,13 +152,104 @@ export default function NGOProfilePage() {
           </div>
 
           <div className="glass-card" style={{ padding: 20 }}>
-            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>Verification Status</div>
+            <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 12 }}>Registration Certificate</div>
+            {certUrl ? (
+               <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  {certUrl.toLowerCase().endsWith(".pdf") ? (
+                    <div style={{ padding: "20px", textAlign: "center" }}>
+                      <span style={{ fontSize: "2rem" }}>📄</span>
+                      <p style={{ fontSize: "0.75rem", marginTop: "0.5rem" }}>PDF Document</p>
+                    </div>
+                  ) : (
+                    <img src={certUrl} alt="Certificate" style={{ width: "100%", maxHeight: 150, objectFit: "contain" }} />
+                  )}
+                   <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 8 }}>
+                     <a href={certUrl} download={true} style={{ padding: "6px 10px", background: "rgba(0,0,0,0.6)", borderRadius: 6, color: "#fff", textDecoration: "none", fontSize: "0.7rem", fontWeight: 600 }}>
+                       📥 Download
+                     </a>
+                     <a href={certUrl} target="_blank" rel="noreferrer" style={{ padding: "6px 10px", background: "rgba(20,184,196,0.8)", borderRadius: 6, color: "#fff", textDecoration: "none", fontSize: "0.7rem", fontWeight: 600 }}>
+                       🔍 View
+                     </a>
+                   </div>
+               </div>
+            ) : (
+              <div style={{ padding: "20px", textAlign: "center", border: "1px dashed rgba(255,255,255,0.1)", borderRadius: 12 }}>
+                <span style={{ fontSize: "1.5rem" }}>📋</span>
+                <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.5rem" }}>No certificate uploaded</p>
+              </div>
+            )}
+            
+            <label style={{
+              display: "block", width: "100%", padding: "10px 16px", marginTop: 12,
+              background: "rgba(20,184,196,0.08)", border: "1px solid rgba(20,184,196,0.25)",
+              borderRadius: 10, cursor: uploadingCert ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600, color: "#14b8c4", textAlign: "center"
+            }}>
+              {uploadingCert ? `⏳ Uploading (${Math.round(uploadProgress)}%)...` : certUrl ? "🔄 Replace Certificate" : "📤 Upload Certificate"}
+              <input type="file" accept="image/*,application/pdf" style={{ display: "none" }} disabled={uploadingCert} onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                  return alert("File is too large. Please upload a file smaller than 5MB.");
+                }
+
+                setUploadingCert(true);
+                setUploadProgress(0);
+
+                try {
+                  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                  // For progress tracking, we'll manually call Firebase Storage instead of the helper if we want finer control
+                  // or just keep using the helper and accept the 30s timeout I added there.
+                  const url = await uploadFile(file, `certificates/${profile.uid}/${Date.now()}_${safeName}`, (p) => setUploadProgress(p));
+
+                  setCertUrl(url);
+                  // Record the upload in a dedicated 'ngoCertificates' collection
+                  await addDoc(collection(db, "ngoCertificates"), {
+                    ngoId: profile.uid,
+                    ngoName: profile.firstName + " " + profile.lastName,
+                    fileUrl: url,
+                    fileName: safeName,
+                    uploadedAt: new Date().toISOString(),
+                    status: "pending"
+                  });
+
+                  // Auto-save this specific field if not in edit mode
+                  if (!editMode) {
+                    await setDoc(doc(db, "users", profile.uid), { 
+                      ngoCertificateUrl: url,
+                      status: "pending_verification" 
+                    }, { merge: true });
+                  }
+
+                } catch (err: any) {
+                  console.error(err);
+                  alert("Upload Failed: " + err.message + "\n\nIf using Cloudinary, ensure your 'resqai_unsigned' preset is set to 'Unsigned' in settings.");
+                } finally {
+                  setUploadingCert(false);
+                }
+              }} />
+            </label>
+            {uploadingCert && (
+              <div style={{ width: "100%", height: 4, background: "rgba(255,255,255,0.05)", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                 <div style={{ width: `${uploadProgress}%`, height: "100%", background: "#14b8c4", transition: "width 0.3s ease" }} />
+              </div>
+            )}
+          </div>
+
+          <div className="glass-card" style={{ padding: 20 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 10, height: 10, borderRadius: "50%", background: profile.status === "verified" ? "#22c55e" : "#f59e0b" }} />
-              <span style={{ fontWeight: 700, color: profile.status === "verified" ? "#22c55e" : "#f59e0b" }}>
-                {profile.status === "verified" ? "VERIFIED" : "PENDING"}
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: profile.status === "verified" ? "#22c55e" : profile.status === "rejected" ? "#ef4444" : "#f59e0b" }} />
+              <span style={{ fontWeight: 700, color: profile.status === "verified" ? "#22c55e" : profile.status === "rejected" ? "#ef4444" : "#f59e0b" }}>
+                {profile.status === "verified" ? "VERIFIED ✅" : profile.status === "rejected" ? "REJECTED ❌" : "PENDING ⏳"}
               </span>
             </div>
+            {profile.status === "rejected" && profile.adminNote && (
+              <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", fontSize: 13, color: "#fca5a5" }}>
+                <strong>Note from Admin:</strong><br/>
+                {profile.adminNote}
+              </div>
+            )}
           </div>
         </div>
 

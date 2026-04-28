@@ -279,10 +279,17 @@ function SignupPageContent() {
                     setUploadingCert(true);
                     try {
                       const { uploadFile } = await import("@/lib/storage");
-                      const url = await uploadFile(file, `certificates/${Date.now()}_${file.name}`);
+                      // Sanitize filename: remove spaces and special characters
+                      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+                      const url = await uploadFile(file, `certificates/${Date.now()}_${safeName}`);
                       update("ngoCertificateUrl", url);
-                    } catch (err) {
-                      alert("Certificate upload failed. Check rules & connection.");
+                    } catch (err: any) {
+                      console.error("Upload error:", err);
+                      let msg = "Certificate upload failed.";
+                      if (err.message?.includes("storage/quota-exceeded")) msg += " Storage quota exceeded.";
+                      if (err.message?.includes("storage/unauthorized")) msg += " Permission denied (Check rules).";
+                      if (err.code === "storage/canceled") msg += " Upload canceled.";
+                      alert(msg + " Please check your connection and try again.");
                     } finally {
                       setUploadingCert(false);
                     }

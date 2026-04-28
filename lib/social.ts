@@ -27,65 +27,88 @@ export interface Comment {
 // ---- POSTS ----
 
 export const createPost = async (author: UserProfile, content: string, imageUrl?: string) => {
-  const newPost: Omit<Post, "id"> = {
-    authorId: author.uid,
-    authorName: `${author.firstName} ${author.lastName}`,
-    authorUsername: author.username,
-    authorAvatar: author.avatarUrl,
-    content,
-    imageUrl,
-    createdAt: new Date().toISOString(),
-    likes: [],
-    commentCount: 0,
-  };
-  
-  const docRef = await addDoc(collection(db, "posts"), newPost);
-  return docRef.id;
+  try {
+    const newPost: Omit<Post, "id"> = {
+      authorId: author.uid,
+      authorName: `${author.firstName} ${author.lastName}`,
+      authorUsername: author.username,
+      authorAvatar: author.avatarUrl,
+      content,
+      imageUrl,
+      createdAt: new Date().toISOString(),
+      likes: [],
+      commentCount: 0,
+    };
+    
+    const docRef = await addDoc(collection(db, "posts"), newPost);
+    return docRef.id;
+  } catch (error) {
+    console.error("Failed to create post:", error);
+    throw error;
+  }
 };
 
 export const subscribeToFeed = (callback: (posts: Post[]) => void) => {
   const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
-  });
+  return onSnapshot(q, 
+    (snapshot) => {
+      callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Post)));
+    },
+    (error) => {
+      console.error("Firestore Error in subscribeToFeed:", error);
+    }
+  );
 };
 
 // ---- LIKES & COMMENTS ----
 
 export const toggleLike = async (postId: string, userId: string, isLiked: boolean) => {
-  const postRef = doc(db, "posts", postId);
-  if (isLiked) {
-    await updateDoc(postRef, { likes: arrayRemove(userId) });
-  } else {
-    await updateDoc(postRef, { likes: arrayUnion(userId) });
+  try {
+    const postRef = doc(db, "posts", postId);
+    if (isLiked) {
+      await updateDoc(postRef, { likes: arrayRemove(userId) });
+    } else {
+      await updateDoc(postRef, { likes: arrayUnion(userId) });
+    }
+  } catch (error) {
+    console.error("Failed to toggle like:", error);
   }
 };
 
 export const addComment = async (postId: string, author: UserProfile, content: string) => {
-  const comment: Omit<Comment, "id"> = {
-    authorId: author.uid,
-    authorName: `${author.firstName} ${author.lastName}`,
-    authorAvatar: author.avatarUrl,
-    content,
-    createdAt: new Date().toISOString(),
-  };
-  
-  const commentsCol = collection(db, "posts", postId, "comments");
-  await addDoc(commentsCol, comment);
-  
-  // Update comment count
-  const postRef = doc(db, "posts", postId);
-  const postSnap = await getDoc(postRef);
-  if (postSnap.exists()) {
-    await updateDoc(postRef, { commentCount: (postSnap.data().commentCount || 0) + 1 });
+  try {
+    const comment: Omit<Comment, "id"> = {
+      authorId: author.uid,
+      authorName: `${author.firstName} ${author.lastName}`,
+      authorAvatar: author.avatarUrl,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    
+    const commentsCol = collection(db, "posts", postId, "comments");
+    await addDoc(commentsCol, comment);
+    
+    // Update comment count
+    const postRef = doc(db, "posts", postId);
+    const postSnap = await getDoc(postRef);
+    if (postSnap.exists()) {
+      await updateDoc(postRef, { commentCount: (postSnap.data().commentCount || 0) + 1 });
+    }
+  } catch (error) {
+    console.error("Failed to add comment:", error);
   }
 };
 
 export const subscribeToComments = (postId: string, callback: (comments: Comment[]) => void) => {
   const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)));
-  });
+  return onSnapshot(q, 
+    (snapshot) => {
+      callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Comment)));
+    },
+    (error) => {
+      console.error("Firestore Error in subscribeToComments:", error);
+    }
+  );
 };
 
 // ---- SOCIAL GRAPH ----
@@ -105,29 +128,42 @@ export interface FriendRequest {
 }
 
 export const sendFriendRequest = async (from: UserProfile, to: UserProfile) => {
-  const request: Omit<FriendRequest, "id"> = {
-    fromId: from.uid,
-    fromName: `${from.firstName} ${from.lastName}`,
-    fromUsername: from.username,
-    fromAvatar: from.avatarUrl || "",
-    toId: to.uid,
-    toName: `${to.firstName} ${to.lastName}`,
-    toUsername: to.username,
-    toAvatar: to.avatarUrl || "",
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
+  try {
+    const request: Omit<FriendRequest, "id"> = {
+      fromId: from.uid,
+      fromName: `${from.firstName} ${from.lastName}`,
+      fromUsername: from.username,
+      fromAvatar: from.avatarUrl || "",
+      toId: to.uid,
+      toName: `${to.firstName} ${to.lastName}`,
+      toUsername: to.username,
+      toAvatar: to.avatarUrl || "",
+      status: "pending",
+      createdAt: new Date().toISOString(),
+    };
 
-  await addDoc(collection(db, "friendships"), request);
+    await addDoc(collection(db, "friendships"), request);
+  } catch (error) {
+    console.error("Failed to send friend request:", error);
+    throw error;
+  }
 };
 
 export const acceptFriendRequest = async (requestId: string) => {
-  const reqRef = doc(db, "friendships", requestId);
-  await updateDoc(reqRef, { status: "accepted" });
+  try {
+    const reqRef = doc(db, "friendships", requestId);
+    await updateDoc(reqRef, { status: "accepted" });
+  } catch (error) {
+    console.error("Failed to accept friend request:", error);
+  }
 };
 
 export const rejectFriendRequest = async (requestId: string) => {
-  await deleteDoc(doc(db, "friendships", requestId));
+  try {
+    await deleteDoc(doc(db, "friendships", requestId));
+  } catch (error) {
+    console.error("Failed to reject friend request:", error);
+  }
 };
 
 export const subscribeToFriendRequests = (userId: string, callback: (requests: FriendRequest[]) => void) => {
@@ -137,36 +173,59 @@ export const subscribeToFriendRequests = (userId: string, callback: (requests: F
     where("status", "==", "pending")
   );
   
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
-  });
+  return onSnapshot(q, 
+    (snapshot) => {
+      callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest)));
+    },
+    (error) => {
+      console.error("Firestore Error in subscribeToFriendRequests:", error);
+    }
+  );
 };
 
 export const subscribeToFriends = (userId: string, callback: (friends: FriendRequest[]) => void) => {
-  // Since we require an OR query which is newer/complex, we'll fetch both directions where accepted
-  // Option 1: Firebase V9 `or` (if supported in this version)
-  // We'll just fetch all friendships involving the user entirely.
-  const q = query(collection(db, "friendships"));
-  return onSnapshot(q, (snapshot) => {
-    const all = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FriendRequest));
-    const myFriends = all.filter(f => 
-      f.status === "accepted" && (f.fromId === userId || f.toId === userId)
-    );
-    callback(myFriends);
-  });
+  // Split into two queries (fromId and toId) then merge client-side
+  // This avoids the Firestore SDK type incompatibility with or() + where() composite filters
+  const mergedMap = new Map<string, FriendRequest>();
+
+  const notify = () => callback(Array.from(mergedMap.values()));
+
+  const q1 = query(collection(db, "friendships"), where("status", "==", "accepted"), where("fromId", "==", userId));
+  const q2 = query(collection(db, "friendships"), where("status", "==", "accepted"), where("toId", "==", userId));
+
+  const unsub1 = onSnapshot(q1,
+    (snap) => { snap.docs.forEach(d => mergedMap.set(d.id, { id: d.id, ...d.data() } as FriendRequest)); notify(); },
+    (e) => console.error("Firestore Error in subscribeToFriends (fromId):", e)
+  );
+
+  const unsub2 = onSnapshot(q2,
+    (snap) => { snap.docs.forEach(d => mergedMap.set(d.id, { id: d.id, ...d.data() } as FriendRequest)); notify(); },
+    (e) => console.error("Firestore Error in subscribeToFriends (toId):", e)
+  );
+
+  return () => { unsub1(); unsub2(); };
 };
 
 export const blockUser = async (userId: string, blockedUserId: string) => {
-  await addDoc(collection(db, "blockedUsers"), {
-    userId,
-    blockedUserId,
-    createdAt: new Date().toISOString()
-  });
+  try {
+    await addDoc(collection(db, "blockedUsers"), {
+      userId,
+      blockedUserId,
+      createdAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Failed to block user:", error);
+  }
 };
 
 export const subscribeToBlockedUsers = (userId: string, callback: (blocks: any[]) => void) => {
   const q = query(collection(db, "blockedUsers"), where("userId", "==", userId));
-  return onSnapshot(q, (snapshot) => {
-    callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-  });
+  return onSnapshot(q, 
+    (snapshot) => {
+      callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    },
+    (error) => {
+      console.error("Firestore Error in subscribeToBlockedUsers:", error);
+    }
+  );
 };
